@@ -107,6 +107,8 @@ mynewt_nmgr_write_at(struct cbor_encoder_writer *writer, int offset,
         return MGMT_ERR_EUNKNOWN;
     }
 
+    writer->bytes_written = OS_MBUF_PKTLEN(mw->m);
+
     return 0;
 }
 
