@@ -17,14 +17,25 @@
 # under the License.
 #
 
-pkg.name: mgmt/newtmgr/port/mynewt
-pkg.description: Server-side newtmgr functionality.
+pkg.name: smp
+pkg.description: Server-side simple management protocol (SMP) functionality.
 pkg.author: "Apache Mynewt <dev@mynewt.apache.org>"
 pkg.homepage: "http://mynewt.apache.org/"
 pkg.keywords:
 
 pkg.deps:
+    - encoding/cborattr
     - kernel/os
-    - mgmt/mgmt
-    - mgmt/mgmt_os
+    - mgmt
+    - smp/port/mynewt
     - util/mem
+
+pkg.deps.NEWTMGR_BLE_HOST:
+    # XXX: Inaccurate path.
+    - mgmt/newtmgr/transport/ble
+
+pkg.apis:
+    - smp
+
+pkg.init:
+    nmgr_pkg_init: 500

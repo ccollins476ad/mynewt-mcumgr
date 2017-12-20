@@ -2,40 +2,40 @@
 
 #include "os/os.h"
 #include "mynewt_mgmt/mynewt_mgmt.h"
-#include "newtmgr/newtmgr.h"
+#include "smp/smp.h"
 #include "mgmt_os/mgmt_os.h"
 #include "mem/mem.h"
-#include "tinycbor/cbor_mbuf_reader.h"
-#include "tinycbor/cbor_mbuf_writer.h"
-#include "mynewt_newtmgr/mynewt_newtmgr.h"
+#include "cbor_mbuf_reader.h"
+#include "cbor_mbuf_writer.h"
+#include "mynewt_smp/mynewt_smp.h"
 
-/* Shared queue that newtmgr uses for work items. */
-struct os_eventq *nmgr_evq;
+/* Shared queue that smp uses for work items. */
+struct os_eventq *smp_evq;
 
-static mgmt_alloc_rsp_fn mynewt_nmgr_alloc_rsp;
-static mgmt_trim_front_fn mynewt_nmgr_trim_front;
-static mgmt_reset_buf_fn mynewt_nmgr_reset_buf;
-static mgmt_write_at_fn mynewt_nmgr_write_at;
-static mgmt_init_reader_fn mynewt_nmgr_init_reader;
-static mgmt_init_writer_fn mynewt_nmgr_init_writer;
-static mgmt_free_buf_fn mynewt_nmgr_free_buf;
-static nmgr_tx_rsp_fn mynewt_nmgr_tx_rsp;
+static mgmt_alloc_rsp_fn mynewt_smp_alloc_rsp;
+static mgmt_trim_front_fn mynewt_smp_trim_front;
+static mgmt_reset_buf_fn mynewt_smp_reset_buf;
+static mgmt_write_at_fn mynewt_smp_write_at;
+static mgmt_init_reader_fn mynewt_smp_init_reader;
+static mgmt_init_writer_fn mynewt_smp_init_writer;
+static mgmt_free_buf_fn mynewt_smp_free_buf;
+static smp_tx_rsp_fn mynewt_smp_tx_rsp;
 
-static const struct mgmt_streamer_cfg mynewt_nmgr_cbor_cfg = {
-    .alloc_rsp = mynewt_nmgr_alloc_rsp,
-    .trim_front = mynewt_nmgr_trim_front,
-    .reset_buf = mynewt_nmgr_reset_buf,
-    .write_at = mynewt_nmgr_write_at,
-    .init_reader = mynewt_nmgr_init_reader,
-    .init_writer = mynewt_nmgr_init_writer,
-    .free_buf = mynewt_nmgr_free_buf,
+static const struct mgmt_streamer_cfg mynewt_smp_cbor_cfg = {
+    .alloc_rsp = mynewt_smp_alloc_rsp,
+    .trim_front = mynewt_smp_trim_front,
+    .reset_buf = mynewt_smp_reset_buf,
+    .write_at = mynewt_smp_write_at,
+    .init_reader = mynewt_smp_init_reader,
+    .init_writer = mynewt_smp_init_writer,
+    .free_buf = mynewt_smp_free_buf,
 };
 
 /**
  * Allocates an mbuf to contain an outgoing response fragment.
  */
 static struct os_mbuf *
-mynewt_nmgr_rsp_frag_alloc(uint16_t frag_size, void *arg)
+mynewt_smp_rsp_frag_alloc(uint16_t frag_size, void *arg)
 {
     struct os_mbuf *src_rsp;
     struct os_mbuf *frag;
@@ -56,7 +56,7 @@ mynewt_nmgr_rsp_frag_alloc(uint16_t frag_size, void *arg)
 }
 
 static void *
-mynewt_nmgr_alloc_rsp(const void *req, void *arg)
+mynewt_smp_alloc_rsp(const void *req, void *arg)
 {
     const struct os_mbuf *om_req;
     struct os_mbuf *om_rsp;
@@ -76,7 +76,7 @@ mynewt_nmgr_alloc_rsp(const void *req, void *arg)
 }
 
 static int
-mynewt_nmgr_trim_front(void *buf, int len, void *arg)
+mynewt_smp_trim_front(void *buf, int len, void *arg)
 {
     struct os_mbuf *om;
 
@@ -86,7 +86,7 @@ mynewt_nmgr_trim_front(void *buf, int len, void *arg)
 }
 
 static void
-mynewt_nmgr_reset_buf(void *buf, void *arg)
+mynewt_smp_reset_buf(void *buf, void *arg)
 {
     struct os_mbuf *om;
 
@@ -95,8 +95,8 @@ mynewt_nmgr_reset_buf(void *buf, void *arg)
 }
 
 static int
-mynewt_nmgr_write_at(struct cbor_encoder_writer *writer, int offset,
-                     const void *data, int len, void *arg)
+mynewt_smp_write_at(struct cbor_encoder_writer *writer, int offset,
+                    const void *data, int len, void *arg)
 {
     struct cbor_mbuf_writer *mw;
     int rc;
@@ -113,8 +113,8 @@ mynewt_nmgr_write_at(struct cbor_encoder_writer *writer, int offset,
 }
 
 static int
-mynewt_nmgr_init_reader(struct cbor_decoder_reader *reader, void *buf,
-                        void *arg)
+mynewt_smp_init_reader(struct cbor_decoder_reader *reader, void *buf,
+                       void *arg)
 {
     struct cbor_mbuf_reader *mr;
 
@@ -125,8 +125,8 @@ mynewt_nmgr_init_reader(struct cbor_decoder_reader *reader, void *buf,
 }
 
 static int
-mynewt_nmgr_init_writer(struct cbor_encoder_writer *writer, void *buf,
-                        void *arg)
+mynewt_smp_init_writer(struct cbor_encoder_writer *writer, void *buf,
+                       void *arg)
 {
     struct cbor_mbuf_writer *mw;
 
@@ -137,31 +137,31 @@ mynewt_nmgr_init_writer(struct cbor_encoder_writer *writer, void *buf,
 }
 
 static int
-mynewt_nmgr_tx_rsp(struct nmgr_streamer *ns, void *rsp, void *arg)
+mynewt_smp_tx_rsp(struct smp_streamer *ss, void *rsp, void *arg)
 {
-    struct mynewt_nmgr_transport *mnt;
+    struct mynewt_smp_transport *msp;
     struct os_mbuf *om_rsp;
     struct os_mbuf *frag;
     uint16_t mtu;
     int rc;
 
-    mnt = arg;
+    msp = arg;
     om_rsp = rsp;
 
-    mtu = mnt->mnt_get_mtu(rsp);
+    mtu = msp->msp_get_mtu(rsp);
     if (mtu == 0) {
         /* The transport cannot support a transmission right now. */
         return MGMT_ERR_EUNKNOWN;
     }
 
     while (om_rsp != NULL) {
-        frag = mem_split_frag(&om_rsp, mtu, mynewt_nmgr_rsp_frag_alloc,
+        frag = mem_split_frag(&om_rsp, mtu, mynewt_smp_rsp_frag_alloc,
                               om_rsp);
         if (frag == NULL) {
             return MGMT_ERR_ENOMEM;
         }
 
-        rc = mnt->mnt_output(mnt, frag);
+        rc = msp->msp_output(msp, frag);
         if (rc != 0) {
             /* Output function already freed mbuf. */
             return MGMT_ERR_EUNKNOWN;
@@ -172,37 +172,37 @@ mynewt_nmgr_tx_rsp(struct nmgr_streamer *ns, void *rsp, void *arg)
 }
 
 static void
-mynewt_nmgr_free_buf(void *buf, void *arg)
+mynewt_smp_free_buf(void *buf, void *arg)
 {
     os_mbuf_free_chain(buf);
 }
 
 static void
-mynewt_nmgr_process(struct mynewt_nmgr_transport *mnt)
+mynewt_smp_process(struct mynewt_smp_transport *msp)
 {
     struct cbor_mbuf_reader reader;
     struct cbor_mbuf_writer writer;
-    struct nmgr_streamer streamer;
+    struct smp_streamer streamer;
     struct os_mbuf *req;
     int rc;
 
-    streamer = (struct nmgr_streamer) {
-        .ns_base = {
-            .cfg = &mynewt_nmgr_cbor_cfg,
+    streamer = (struct smp_streamer) {
+        .ss_base = {
+            .cfg = &mynewt_smp_cbor_cfg,
             .reader = &reader.r,
             .writer = &writer.enc,
-            .cb_arg = mnt,
+            .cb_arg = msp,
         },
-        .ns_tx_rsp = mynewt_nmgr_tx_rsp,
+        .ss_tx_rsp = mynewt_smp_tx_rsp,
     };
 
     while (1) {
-        req = os_mqueue_get(&mnt->mnt_imq);
+        req = os_mqueue_get(&msp->msp_imq);
         if (req == NULL) {
             break;
         }
 
-        rc = nmgr_process_single_packet(&streamer, req);
+        rc = smp_process_single_packet(&streamer, req);
         if (rc != 0) {
             break;
         }
@@ -210,24 +210,24 @@ mynewt_nmgr_process(struct mynewt_nmgr_transport *mnt)
 }
 
 static void
-mynewt_nmgr_event_data_in(struct os_event *ev)
+mynewt_smp_event_data_in(struct os_event *ev)
 {
-    mynewt_nmgr_process(ev->ev_arg);
+    mynewt_smp_process(ev->ev_arg);
 }
 
 int
-mynewt_nmgr_transport_init(struct mynewt_nmgr_transport *mnt,
-                           mynewt_nmgr_transport_out_fn *output_func,
-                           mynewt_nmgr_transport_get_mtu_fn *get_mtu_func)
+mynewt_smp_transport_init(struct mynewt_smp_transport *msp,
+                          mynewt_smp_transport_out_fn *output_func,
+                          mynewt_smp_transport_get_mtu_fn *get_mtu_func)
 {
     int rc;
 
-    *mnt = (struct mynewt_nmgr_transport) {
-        .mnt_output = output_func,
-        .mnt_get_mtu = get_mtu_func,
+    *msp = (struct mynewt_smp_transport) {
+        .msp_output = output_func,
+        .msp_get_mtu = get_mtu_func,
     };
 
-    rc = os_mqueue_init(&mnt->mnt_imq, mynewt_nmgr_event_data_in, mnt);
+    rc = os_mqueue_init(&msp->msp_imq, mynewt_smp_event_data_in, msp);
     if (rc != 0) {
         return rc;
     }
@@ -236,11 +236,11 @@ mynewt_nmgr_transport_init(struct mynewt_nmgr_transport *mnt,
 }
 
 int
-mynewt_nmgr_rx_req(struct mynewt_nmgr_transport *mnt, struct os_mbuf *req)
+mynewt_smp_rx_req(struct mynewt_smp_transport *msp, struct os_mbuf *req)
 {
     int rc;
 
-    rc = os_mqueue_put(&mnt->mnt_imq, mgmt_evq_get(), req);
+    rc = os_mqueue_put(&msp->msp_imq, mgmt_evq_get(), req);
     if (rc != 0) {
         os_mbuf_free_chain(req);
     }
@@ -251,17 +251,17 @@ mynewt_nmgr_rx_req(struct mynewt_nmgr_transport *mnt, struct os_mbuf *req)
 struct os_eventq *
 mgmt_evq_get(void)
 {
-    return nmgr_evq;
+    return smp_evq;
 }
 
 void
 mgmt_evq_set(struct os_eventq *evq)
 {
-    nmgr_evq = evq;
+    smp_evq = evq;
 }
 
 void
-nmgr_pkg_init(void)
+smp_pkg_init(void)
 {
     int rc;
 

@@ -17,8 +17,10 @@
  * under the License.
  */
 
-#ifndef _NEWTMGR_H_
-#define _NEWTMGR_H_
+/** SMP - Simple Management Protocol. */
+
+#ifndef H_SMP_
+#define H_SMP_
 
 #include "mgmt/mgmt.h"
 
@@ -26,23 +28,25 @@
 extern "C" {
 #endif
 
-struct mynewt_nmgr_transport;
-struct nmgr_streamer;
+struct mynewt_smp_transport;
+struct smp_streamer;
 struct mgmt_hdr;
-typedef int nmgr_tx_rsp_fn(struct nmgr_streamer *ns, void *buf, void *arg);
 
-struct nmgr_streamer {
-    struct mgmt_streamer ns_base;
-    nmgr_tx_rsp_fn *ns_tx_rsp;
+typedef int smp_tx_rsp_fn(struct smp_streamer *ss, void *buf, void *arg);
+
+/** Decodes, encodes, and transmits SMP packets. */
+struct smp_streamer {
+    struct mgmt_streamer ss_base;
+    smp_tx_rsp_fn *ss_tx_rsp;
 };
 
-void nmgr_ntoh_hdr(struct mgmt_hdr *hdr);
-int nmgr_handle_single_payload(struct mgmt_cbuf *cbuf,
-                               const struct mgmt_hdr *req_hdr);
-int nmgr_process_single_packet(struct nmgr_streamer *streamer, void *req);
+void smp_ntoh_hdr(struct mgmt_hdr *hdr);
+int smp_handle_single_payload(struct mgmt_cbuf *cbuf,
+                              const struct mgmt_hdr *req_hdr);
+int smp_process_single_packet(struct smp_streamer *streamer, void *req);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _NETMGR_H */
+#endif /* H_SMP_ */

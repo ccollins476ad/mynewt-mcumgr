@@ -17,13 +17,13 @@
  * under the License.
  */
 
-#ifndef H_MYNEWT_NEWTMGR_
-#define H_MYNEWT_NEWTMGR_
+#ifndef H_MYNEWT_SMP_
+#define H_MYNEWT_SMP_
 
 #include <inttypes.h>
 #include "mgmt/mgmt.h"
 #include "os/os_mbuf.h"
-struct mynewt_nmgr_transport;
+struct mynewt_smp_transport;
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,8 +33,8 @@ extern "C" {
  * Transmit function.  The supplied mbuf is always consumed, regardless of
  * return code.
  */
-typedef int mynewt_nmgr_transport_out_fn(struct mynewt_nmgr_transport *mnt,
-                                         struct os_mbuf *m);
+typedef int mynewt_smp_transport_out_fn(struct mynewt_smp_transport *mnt,
+                                        struct os_mbuf *m);
 
 /**
  * MTU query function.  The supplied mbuf should contain a request received
@@ -45,22 +45,22 @@ typedef int mynewt_nmgr_transport_out_fn(struct mynewt_nmgr_transport *mnt,
  * @return                      The transport's MTU;
  *                              0 if transmission is currently not possible.
  */
-typedef uint16_t mynewt_nmgr_transport_get_mtu_fn(struct os_mbuf *m);
+typedef uint16_t mynewt_smp_transport_get_mtu_fn(struct os_mbuf *m);
 
-struct mynewt_nmgr_transport {
-    struct os_mqueue mnt_imq;
-    mynewt_nmgr_transport_out_fn *mnt_output;
-    mynewt_nmgr_transport_get_mtu_fn *mnt_get_mtu;
+struct mynewt_smp_transport {
+    struct os_mqueue msp_imq;
+    mynewt_smp_transport_out_fn *msp_output;
+    mynewt_smp_transport_get_mtu_fn *msp_get_mtu;
 };
 
-int mynewt_nmgr_transport_init(struct mynewt_nmgr_transport *mnt,
-                               mynewt_nmgr_transport_out_fn *output_func,
-                               mynewt_nmgr_transport_get_mtu_fn *get_mtu_func);
+int mynewt_smp_transport_init(struct mynewt_smp_transport *mnt,
+                               mynewt_smp_transport_out_fn *output_func,
+                               mynewt_smp_transport_get_mtu_fn *get_mtu_func);
 
-int mynewt_nmgr_rx_req(struct mynewt_nmgr_transport *mnt, struct os_mbuf *req);
+int mynewt_smp_rx_req(struct mynewt_smp_transport *mnt, struct os_mbuf *req);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* H_MYNEWT_NETMGR_ */
+#endif /* H_MYNEWT_SMP_ */

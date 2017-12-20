@@ -21,15 +21,14 @@
 #define H_MGMT_MGMT_
 
 #include <inttypes.h>
-
-#include "tinycbor/cbor.h"
+#include "cbor.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* MTU for newtmgr responses */
-#define MGMT_MAX_MTU 1024
+#define MGMT_MAX_MTU            (1024)
 
 #define MGMT_OP_READ            (0)
 #define MGMT_OP_READ_RSP        (1)
@@ -63,7 +62,7 @@ extern "C" {
 #define MGMT_ERR_EMSGSIZE       (7)     /* Response too large. */
 #define MGMT_ERR_EPERUSER       (256)
 
-#define NMGR_HDR_SIZE           (8)
+#define MGMT_HDR_SIZE       (8)
 
 struct mgmt_hdr {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
@@ -102,7 +101,7 @@ struct mgmt_streamer_cfg {
     mgmt_free_buf_fn *free_buf;
 };
 
-/** Decodes requests and encodes responses. */
+/** Decodes requests and encodes responses for any mgmt protocol. */
 struct mgmt_streamer {
     const struct mgmt_streamer_cfg *cfg;
     void *cb_arg;
@@ -130,10 +129,15 @@ struct mgmt_handler {
 
 /** A collection of handlers for every command in a single group. */
 struct mgmt_group {
+    /** Points to the next group in the list. */
+    struct mgmt_group *mg_next;
+
+    /** Array of handlers; one entry per command ID. */
     const struct mgmt_handler *mg_handlers;
     uint16_t mg_handlers_count;
+
+    /* The numeric ID of this group. */
     uint16_t mg_group_id;
-    struct mgmt_group *mg_next;
 };
 
 #define MGMT_GROUP_SET_HANDLERS(group__, handlers__) do {   \
@@ -158,6 +162,8 @@ const struct mgmt_handler *mgmt_find_handler(uint16_t group_id,
                                              uint16_t command_id);
 int mgmt_err_from_cbor(int cbor_status);
 int mgmt_cbuf_init(struct mgmt_cbuf *cbuf, struct mgmt_streamer *streamer);
+void mgmt_ntoh_hdr(struct mgmt_hdr *hdr);
+void mgmt_hton_hdr(struct mgmt_hdr *hdr);
 
 #ifdef __cplusplus
 }

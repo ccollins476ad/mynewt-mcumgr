@@ -154,3 +154,17 @@ mgmt_cbuf_init(struct mgmt_cbuf *cbuf, struct mgmt_streamer *streamer)
 
     return 0;
 }
+
+void
+mgmt_ntoh_hdr(struct mgmt_hdr *hdr)
+{
+    hdr->nh_len = ntohs(hdr->nh_len);
+    hdr->nh_group = ntohs(hdr->nh_group);
+}
+
+void
+mgmt_hton_hdr(struct mgmt_hdr *hdr)
+{
+    hdr->nh_len = htons(hdr->nh_len);
+    hdr->nh_group = htons(hdr->nh_group);
+}
