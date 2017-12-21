@@ -31,10 +31,10 @@ extern "C" {
 /* MTU for newtmgr responses */
 #define MGMT_MAX_MTU 1024
 
-#define NMGR_OP_READ            (0)
-#define NMGR_OP_READ_RSP        (1)
-#define NMGR_OP_WRITE           (2)
-#define NMGR_OP_WRITE_RSP       (3)
+#define MGMT_OP_READ            (0)
+#define MGMT_OP_READ_RSP        (1)
+#define MGMT_OP_WRITE           (2)
+#define MGMT_OP_WRITE_RSP       (3)
 
 /* First 64 groups are reserved for system level newtmgr commands.
  * Per-user commands are then defined after group 64.
@@ -53,30 +53,30 @@ extern "C" {
 /**
  * Newtmgr error codes
  */
-#define MGMT_ERR_EOK        (0)
-#define MGMT_ERR_EUNKNOWN   (1)
-#define MGMT_ERR_ENOMEM     (2)
-#define MGMT_ERR_EINVAL     (3)
-#define MGMT_ERR_ETIMEOUT   (4)
-#define MGMT_ERR_ENOENT     (5)
-#define MGMT_ERR_EBADSTATE  (6)     /* Current state disallows command. */
-#define MGMT_ERR_EMSGSIZE   (7)     /* Response too large. */
-#define MGMT_ERR_EPERUSER   (256)
+#define MGMT_ERR_EOK            (0)
+#define MGMT_ERR_EUNKNOWN       (1)
+#define MGMT_ERR_ENOMEM         (2)
+#define MGMT_ERR_EINVAL         (3)
+#define MGMT_ERR_ETIMEOUT       (4)
+#define MGMT_ERR_ENOENT         (5)
+#define MGMT_ERR_EBADSTATE      (6)     /* Current state disallows command. */
+#define MGMT_ERR_EMSGSIZE       (7)     /* Response too large. */
+#define MGMT_ERR_EPERUSER       (256)
 
 #define NMGR_HDR_SIZE           (8)
 
-struct nmgr_hdr {
+struct mgmt_hdr {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    uint8_t  nh_op:3;           /* NMGR_OP_XXX */
+    uint8_t  nh_op:3;           /* MGMT_OP_XXX */
     uint8_t  _res1:5;
 #endif
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
     uint8_t  _res1:5;
-    uint8_t  nh_op:3;           /* NMGR_OP_XXX */
+    uint8_t  nh_op:3;           /* MGMT_OP_XXX */
 #endif
     uint8_t  nh_flags;          /* reserved for future flags */
     uint16_t nh_len;            /* length of the payload */
-    uint16_t nh_group;          /* NMGR_GROUP_XXX */
+    uint16_t nh_group;          /* MGMT_GROUP_XXX */
     uint8_t  nh_seq;            /* sequence number */
     uint8_t  nh_id;             /* message ID within group */
 };
@@ -122,7 +122,7 @@ struct mgmt_cbuf {
 
 typedef int mgmt_handler_fn(struct mgmt_cbuf *cbuf);
 
-/** Read and write handlers for a single command ID. */
+/** Read handler and write handler for a single command ID. */
 struct mgmt_handler {
     mgmt_handler_fn *mh_read;
     mgmt_handler_fn *mh_write;

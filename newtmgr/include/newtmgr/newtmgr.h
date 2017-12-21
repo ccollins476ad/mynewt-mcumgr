@@ -28,7 +28,7 @@ extern "C" {
 
 struct mynewt_nmgr_transport;
 struct nmgr_streamer;
-struct nmgr_hdr;
+struct mgmt_hdr;
 typedef int nmgr_tx_rsp_fn(struct nmgr_streamer *ns, void *buf, void *arg);
 
 struct nmgr_streamer {
@@ -36,9 +36,9 @@ struct nmgr_streamer {
     nmgr_tx_rsp_fn *ns_tx_rsp;
 };
 
-void nmgr_ntoh_hdr(struct nmgr_hdr *hdr);
+void nmgr_ntoh_hdr(struct mgmt_hdr *hdr);
 int nmgr_handle_single_payload(struct mgmt_cbuf *cbuf,
-                               const struct nmgr_hdr *req_hdr);
+                               const struct mgmt_hdr *req_hdr);
 int nmgr_process_single_packet(struct nmgr_streamer *streamer, void *req);
 
 #ifdef __cplusplus

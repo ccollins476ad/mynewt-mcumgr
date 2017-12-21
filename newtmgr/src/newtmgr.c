@@ -67,31 +67,31 @@ nmgr_align4(int x)
 static uint8_t
 nmgr_rsp_op(uint8_t req_op)
 {
-    if (req_op == NMGR_OP_READ) {
-        return NMGR_OP_READ_RSP;
+    if (req_op == MGMT_OP_READ) {
+        return MGMT_OP_READ_RSP;
     } else {
-        return NMGR_OP_WRITE_RSP;
+        return MGMT_OP_WRITE_RSP;
     }
 }
 
 void
-nmgr_ntoh_hdr(struct nmgr_hdr *hdr)
+nmgr_ntoh_hdr(struct mgmt_hdr *hdr)
 {
     hdr->nh_len = ntohs(hdr->nh_len);
     hdr->nh_group = ntohs(hdr->nh_group);
 }
 
 static void
-nmgr_hton_hdr(struct nmgr_hdr *hdr)
+nmgr_hton_hdr(struct mgmt_hdr *hdr)
 {
     hdr->nh_len = htons(hdr->nh_len);
     hdr->nh_group = htons(hdr->nh_group);
 }
 
 static void
-nmgr_init_rsp_hdr(const struct nmgr_hdr *req_hdr, struct nmgr_hdr *rsp_hdr)
+nmgr_init_rsp_hdr(const struct mgmt_hdr *req_hdr, struct mgmt_hdr *rsp_hdr)
 {
-    *rsp_hdr = (struct nmgr_hdr) {
+    *rsp_hdr = (struct mgmt_hdr) {
         .nh_len = 0,
         .nh_flags = 0,
         .nh_op = nmgr_rsp_op(req_hdr->nh_op),
@@ -102,7 +102,7 @@ nmgr_init_rsp_hdr(const struct nmgr_hdr *req_hdr, struct nmgr_hdr *rsp_hdr)
 }
 
 static int
-nmgr_read_hdr(struct nmgr_streamer *streamer, struct nmgr_hdr *hdr)
+nmgr_read_hdr(struct nmgr_streamer *streamer, struct mgmt_hdr *hdr)
 {
     struct mgmt_streamer *base;
 
@@ -117,7 +117,7 @@ nmgr_read_hdr(struct nmgr_streamer *streamer, struct nmgr_hdr *hdr)
 }
 
 static int
-nmgr_write_hdr(struct nmgr_streamer *streamer, const struct nmgr_hdr *hdr)
+nmgr_write_hdr(struct nmgr_streamer *streamer, const struct mgmt_hdr *hdr)
 {
     int rc;
 
@@ -127,12 +127,12 @@ nmgr_write_hdr(struct nmgr_streamer *streamer, const struct nmgr_hdr *hdr)
 
 static int
 nmgr_build_err_rsp(struct nmgr_streamer *streamer,
-                   const struct nmgr_hdr *req_hdr,
+                   const struct mgmt_hdr *req_hdr,
                    int status)
 {
     struct CborEncoder map;
     struct mgmt_cbuf cbuf;
-    struct nmgr_hdr rsp_hdr;
+    struct mgmt_hdr rsp_hdr;
     int rc;
 
     rc = mgmt_cbuf_init(&cbuf, &streamer->ns_base);
@@ -161,7 +161,7 @@ nmgr_build_err_rsp(struct nmgr_streamer *streamer,
         return rc;
     }
 
-    rsp_hdr.nh_len = cbor_encode_bytes_written(&cbuf.encoder) - NMGR_HDR_SIZE;
+    rsp_hdr.nh_len = cbor_encode_bytes_written(&cbuf.encoder) - MGMT_HDR_SIZE;
     nmgr_hton_hdr(&rsp_hdr);
     rc = nmgr_write_hdr(streamer, &rsp_hdr);
     if (rc != 0) {
@@ -173,7 +173,7 @@ nmgr_build_err_rsp(struct nmgr_streamer *streamer,
 
 int
 nmgr_handle_single_payload(struct mgmt_cbuf *cbuf,
-                           const struct nmgr_hdr *req_hdr)
+                           const struct mgmt_hdr *req_hdr)
 {
     const struct mgmt_handler *handler;
     struct CborEncoder payload_encoder;
@@ -194,13 +194,13 @@ nmgr_handle_single_payload(struct mgmt_cbuf *cbuf,
         return rc;
     }
 
-    if (req_hdr->nh_op == NMGR_OP_READ) {
+    if (req_hdr->nh_op == MGMT_OP_READ) {
         if (handler->mh_read) {
             rc = handler->mh_read(cbuf);
         } else {
             rc = MGMT_ERR_ENOENT;
         }
-    } else if (req_hdr->nh_op == NMGR_OP_WRITE) {
+    } else if (req_hdr->nh_op == MGMT_OP_WRITE) {
         if (handler->mh_write) {
             rc = handler->mh_write(cbuf);
         } else {
@@ -226,10 +226,10 @@ nmgr_handle_single_payload(struct mgmt_cbuf *cbuf,
 
 static int
 nmgr_handle_single_req(struct nmgr_streamer *streamer,
-                       const struct nmgr_hdr *req_hdr)
+                       const struct mgmt_hdr *req_hdr)
 {
     struct mgmt_cbuf cbuf;
-    struct nmgr_hdr rsp_hdr;
+    struct mgmt_hdr rsp_hdr;
     int rc;
 
     rc = mgmt_cbuf_init(&cbuf, &streamer->ns_base);
@@ -251,7 +251,7 @@ nmgr_handle_single_req(struct nmgr_streamer *streamer,
         return rc;
     }
 
-    rsp_hdr.nh_len = cbor_encode_bytes_written(&cbuf.encoder) - NMGR_HDR_SIZE;
+    rsp_hdr.nh_len = cbor_encode_bytes_written(&cbuf.encoder) - MGMT_HDR_SIZE;
     nmgr_hton_hdr(&rsp_hdr);
     rc = nmgr_write_hdr(streamer, &rsp_hdr);
     if (rc != 0) {
@@ -263,7 +263,7 @@ nmgr_handle_single_req(struct nmgr_streamer *streamer,
 
 static void
 nmgr_on_err(struct nmgr_streamer *streamer,
-            const struct nmgr_hdr *req_hdr,
+            const struct mgmt_hdr *req_hdr,
             void *req,
             void *rsp,
             int status)
@@ -291,7 +291,7 @@ nmgr_on_err(struct nmgr_streamer *streamer,
 int
 nmgr_process_single_packet(struct nmgr_streamer *streamer, void *req)
 {
-    struct nmgr_hdr req_hdr;
+    struct mgmt_hdr req_hdr;
     void *rsp;
     bool valid_hdr;
     int rc;
@@ -312,7 +312,7 @@ nmgr_process_single_packet(struct nmgr_streamer *streamer, void *req)
             break;
         }
         nmgr_ntoh_hdr(&req_hdr);
-        rc = mgmt_streamer_trim_front(&streamer->ns_base, req, NMGR_HDR_SIZE);
+        rc = mgmt_streamer_trim_front(&streamer->ns_base, req, MGMT_HDR_SIZE);
         assert(rc == 0);
 
         rsp = mgmt_streamer_alloc_rsp(&streamer->ns_base, req);
