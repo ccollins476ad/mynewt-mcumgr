@@ -14,9 +14,11 @@
 int img_impl_erase_slot(void);
 
 /**
- * @brief Marks the image in slot 1 as pending. On the next reboot, the system
- * will perform a boot of the slot 1 image.
+ * @brief Marks the image in the specified slot as pending. On the next reboot,
+ * the system will perform a boot of the specified image.
  *
+ * @param slot The slot to mark as pending.  In the typical use case, this is
+ * 1.
  * @param permanent Whether the image should be used permanently or
  * only tested once:
  *   0=run image once, then confirm or revert.
@@ -24,7 +26,7 @@ int img_impl_erase_slot(void);
  *
  * @return 0 on success, MGMT_ERR_[...] code on failure.
  */
-int img_impl_write_pending(bool permanent);
+int img_impl_write_pending(int slot, bool permanent);
 
 /**
  * @brief Marks the image in slot 0 as confirmed. The system will continue

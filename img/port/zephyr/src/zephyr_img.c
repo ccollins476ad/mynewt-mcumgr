@@ -105,11 +105,14 @@ img_impl_erase_slot(void)
 }
 
 int
-img_impl_write_pending(bool permanent)
+img_impl_write_pending(int slot, bool permanent)
 {
     int rc;
 
     img_impl_init_flash();
+    if (slot != 1) {
+        return MGMT_ERR_EINVAL;
+    }
 
     rc = boot_request_upgrade(permanent);
     if (rc != 0) {

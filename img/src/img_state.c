@@ -106,7 +106,6 @@ img_state_slot_in_use(int slot)
 int
 img_state_set_pending(int slot, int permanent)
 {
-    uint32_t image_flags;
     uint8_t state_flags;
     int rc;
 
@@ -119,12 +118,7 @@ img_state_set_pending(int slot, int permanent)
         return MGMT_ERR_EBADSTATE;
     }
 
-    rc = img_read_info(slot, NULL, NULL, &image_flags);
-    if (rc != 0) {
-        return MGMT_ERR_EUNKNOWN;
-    }
-
-    rc = img_impl_write_pending(permanent);
+    rc = img_impl_write_pending(slot, permanent);
     if (rc != 0) {
         return MGMT_ERR_EUNKNOWN;
     }
@@ -142,7 +136,6 @@ img_state_confirm(void)
         return MGMT_ERR_EBADSTATE;
     }
 
-    /* Confirm the unified image or loader in slot 0. */
     rc = img_impl_write_confirmed();
     if (rc != 0) {
         return MGMT_ERR_EUNKNOWN;
