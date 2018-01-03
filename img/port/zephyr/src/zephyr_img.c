@@ -2,6 +2,7 @@
 #include <flash.h>
 #include <zephyr.h>
 #include <soc.h>
+#include <init.h>
 #include <dfu/mcuboot.h>
 #include <dfu/flash_img.h>
 #include "mgmt/mgmt.h"
@@ -10,14 +11,6 @@
 
 static struct device *zephyr_img_flash_dev;
 static struct flash_img_context zephyr_img_flash_ctxt;
-
-static void
-img_impl_init_flash(void)
-{
-    if (zephyr_img_flash_dev == NULL) {
-        zephyr_img_flash_dev = device_get_binding(FLASH_DRIVER_NAME);
-    }
-}
 
 static int
 img_impl_flash_check_empty(off_t offset, size_t size, bool *out_empty)
@@ -85,8 +78,6 @@ img_impl_erase_slot(void)
     bool empty;
     int rc;
 
-    img_impl_init_flash();
-
     rc = img_impl_flash_check_empty(FLASH_AREA_IMAGE_1_OFFSET,
                                     FLASH_AREA_IMAGE_1_SIZE,
                                     &empty);
@@ -109,7 +100,6 @@ img_impl_write_pending(int slot, bool permanent)
 {
     int rc;
 
-    img_impl_init_flash();
     if (slot != 1) {
         return MGMT_ERR_EINVAL;
     }
@@ -127,8 +117,6 @@ img_impl_write_confirmed(void)
 {
     int rc;
 
-    img_impl_init_flash();
-
     rc = boot_write_img_confirmed();
     if (rc != 0) {
         return MGMT_ERR_EUNKNOWN;
@@ -144,8 +132,6 @@ img_impl_read(int slot, unsigned int offset, void *dst,
     off_t abs_offset;
     int rc;
 
-    img_impl_init_flash();
-
     abs_offset = img_impl_abs_offset(slot, offset);
     rc = flash_read(zephyr_img_flash_dev, abs_offset, dst, num_bytes);
     if (rc != 0) {
@@ -160,8 +146,6 @@ img_impl_write_image_data(unsigned int offset, const void *data,
                           unsigned int num_bytes, bool last)
 {
     int rc;
-
-    img_impl_init_flash();
 
     if (offset == 0) {
         flash_img_init(&zephyr_img_flash_ctxt, zephyr_img_flash_dev);
@@ -187,8 +171,6 @@ img_impl_write_image_data(unsigned int offset, const void *data,
 int
 img_impl_swap_type(void)
 {
-    img_impl_init_flash();
-
     switch (boot_swap_type()) {
     case BOOT_SWAP_TYPE_NONE:
         return IMG_SWAP_TYPE_NONE;
@@ -203,3 +185,17 @@ img_impl_swap_type(void)
         return IMG_SWAP_TYPE_NONE;
     }
 }
+
+static int
+img_impl_init(struct device *dev)
+{
+    ARG_UNUSED(dev);
+
+    zephyr_img_flash_dev = device_get_binding(FLASH_DRIVER_NAME);
+    if (!zephyr_img_flash_dev) {
+        return -ENODEV;
+    }
+    return 0;
+}
+
+SYS_INIT(img_impl_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
