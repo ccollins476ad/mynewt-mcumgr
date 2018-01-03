@@ -24,11 +24,11 @@ pkg.homepage: "http://mynewt.apache.org/"
 pkg.keywords:
 
 pkg.deps:
-    - encoding/cborattr
-    - kernel/os
-    - mgmt
-    - smp/port/mynewt
-    - util/mem
+    - '@apache-mynewt-core/encoding/cborattr'
+    - '@apache-mynewt-core/kernel/os'
+    - '@apache-mynewt-core/util/mem'
+    - '@mynewt-mcumgr/mgmt'
+    - '@mynewt-mcumgr/smp/port/mynewt'
 
 pkg.deps.NEWTMGR_BLE_HOST:
     # XXX: Inaccurate path.
@@ -38,4 +38,4 @@ pkg.apis:
     - smp
 
 pkg.init:
-    nmgr_pkg_init: 500
+    smp_pkg_init: 500

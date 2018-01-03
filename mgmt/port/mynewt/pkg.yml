@@ -17,11 +17,11 @@
 # under the License.
 #
 
-pkg.name: mgmt/mgmt/port/mynewt
+pkg.name: mgmt/port/mynewt
 pkg.description: XXX
 pkg.author: "Apache Mynewt <dev@mynewt.apache.org>"
 pkg.homepage: "http://mynewt.apache.org/"
 pkg.keywords:
 
 pkg.deps:
-    - kernel/os
+    - '@apache-mynewt-core/kernel/os'
