@@ -23,32 +23,6 @@ static const struct mgmt_streamer_cfg zephyr_smp_cbor_cfg = {
     .free_buf = zephyr_smp_free_buf,
 };
 
-#if 0
-/**
- * Allocates an mbuf to contain an outgoing response fragment.
- */
-static struct os_mbuf *
-zephyr_smp_rsp_frag_alloc(uint16_t frag_size, void *arg)
-{
-    struct os_mbuf *src_rsp;
-    struct os_mbuf *frag;
-
-    /* We need to duplicate the user header from the source response, as that
-     * is where transport-specific information is stored.
-     */
-    src_rsp = arg;
-
-    frag = os_msys_get_pkthdr(frag_size, OS_MBUF_USRHDR_LEN(src_rsp));
-    if (frag != NULL) {
-        /* Copy the user header from the response into the fragment mbuf. */
-        memcpy(OS_MBUF_USRHDR(frag), OS_MBUF_USRHDR(src_rsp),
-               OS_MBUF_USRHDR_LEN(src_rsp));
-    }
-
-    return frag;
-}
-#endif
-
 static void *
 zephyr_smp_alloc_rsp(const void *req, void *arg)
 {
@@ -66,6 +40,29 @@ zephyr_smp_alloc_rsp(const void *req, void *arg)
     rsp_pkt->extra = req_pkt->extra;
 
     return rsp_pkt;
+}
+
+static struct zephyr_nmgr_pkt *
+zephyr_smp_split_frag(struct zephyr_nmgr_pkt **pkt, uint16_t mtu)
+{
+    struct zephyr_nmgr_pkt *frag;
+    struct zephyr_nmgr_pkt *src;
+
+    src = *pkt;
+
+    if (src->len <= mtu) {
+        *pkt = NULL;
+        frag = src;
+    } else {
+        frag = zephyr_smp_alloc_rsp(src, NULL);
+        frag->len = mtu;
+        memcpy(frag->data, src->data, mtu);
+
+        src->len -= mtu;
+        memmove(src->data, src->data + mtu, src->len);
+    }
+
+    return frag;
 }
 
 static int
@@ -126,18 +123,35 @@ static int
 zephyr_smp_tx_rsp(struct smp_streamer *ns, void *rsp, void *arg)
 {
     struct zephyr_smp_transport *zst;
+    struct zephyr_nmgr_pkt *frag;
     struct zephyr_nmgr_pkt *pkt;
+    uint16_t mtu;
     int rc;
+    int i;
 
     zst = arg;
     pkt = rsp;
 
-    rc = zst->zst_output(zst, pkt);
-    if (rc != 0) {
+    mtu = zst->zst_get_mtu(rsp);
+    if (mtu == 0) {
+        /* The transport cannot support a transmission right now. */
         return MGMT_ERR_EUNKNOWN;
     }
 
-    return MGMT_ERR_EOK;
+    i = 0;
+    while (pkt != NULL) {
+        frag = zephyr_smp_split_frag(&pkt, mtu);
+        if (frag == NULL) {
+            return MGMT_ERR_ENOMEM;
+        }
+
+        rc = zst->zst_output(zst, frag);
+        if (rc != 0) {
+            return MGMT_ERR_EUNKNOWN;
+        }
+    }
+
+    return 0;
 }
 
 static void

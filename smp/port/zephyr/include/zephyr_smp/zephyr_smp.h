@@ -14,7 +14,18 @@ struct zephyr_nmgr_pkt;
  */
 typedef int zephyr_smp_transport_out_fn(struct zephyr_smp_transport *zst,
                                         struct zephyr_nmgr_pkt *pkt);
-typedef uint16_t zephyr_smp_transport_get_mtu_fn(void);
+
+/**
+ * MTU query function.  The supplied packet should contain a request received
+ * from the peer whose MTU is being queried.  This function takes a packet
+ * parameter because some transports store connection-specific information in
+ * the packet (e.g., the BLE transport stores the connection pointer).
+ *
+ * @return                      The transport's MTU;
+ *                              0 if transmission is currently not possible.
+ */
+typedef uint16_t
+zephyr_smp_transport_get_mtu_fn(const struct zephyr_nmgr_pkt *pkt);
 
 struct zephyr_smp_transport {
     /* Must be the first member. */
