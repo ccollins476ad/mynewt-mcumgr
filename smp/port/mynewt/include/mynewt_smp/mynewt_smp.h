@@ -33,7 +33,7 @@ extern "C" {
  * Transmit function.  The supplied mbuf is always consumed, regardless of
  * return code.
  */
-typedef int mynewt_smp_transport_out_fn(struct mynewt_smp_transport *mnt,
+typedef int mynewt_smp_transport_out_fn(struct mynewt_smp_transport *mst,
                                         struct os_mbuf *m);
 
 /**
@@ -48,16 +48,16 @@ typedef int mynewt_smp_transport_out_fn(struct mynewt_smp_transport *mnt,
 typedef uint16_t mynewt_smp_transport_get_mtu_fn(struct os_mbuf *m);
 
 struct mynewt_smp_transport {
-    struct os_mqueue msp_imq;
-    mynewt_smp_transport_out_fn *msp_output;
-    mynewt_smp_transport_get_mtu_fn *msp_get_mtu;
+    struct os_mqueue mst_imq;
+    mynewt_smp_transport_out_fn *mst_output;
+    mynewt_smp_transport_get_mtu_fn *mst_get_mtu;
 };
 
-int mynewt_smp_transport_init(struct mynewt_smp_transport *mnt,
-                               mynewt_smp_transport_out_fn *output_func,
-                               mynewt_smp_transport_get_mtu_fn *get_mtu_func);
+int mynewt_smp_transport_init(struct mynewt_smp_transport *mst,
+                              mynewt_smp_transport_out_fn *output_func,
+                              mynewt_smp_transport_get_mtu_fn *get_mtu_func);
 
-int mynewt_smp_rx_req(struct mynewt_smp_transport *mnt, struct os_mbuf *req);
+int mynewt_smp_rx_req(struct mynewt_smp_transport *mst, struct os_mbuf *req);
 
 #ifdef __cplusplus
 }

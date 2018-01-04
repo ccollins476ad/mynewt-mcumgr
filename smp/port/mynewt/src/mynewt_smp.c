@@ -139,16 +139,16 @@ mynewt_smp_init_writer(struct cbor_encoder_writer *writer, void *buf,
 static int
 mynewt_smp_tx_rsp(struct smp_streamer *ss, void *rsp, void *arg)
 {
-    struct mynewt_smp_transport *msp;
+    struct mynewt_smp_transport *mst;
     struct os_mbuf *om_rsp;
     struct os_mbuf *frag;
     uint16_t mtu;
     int rc;
 
-    msp = arg;
+    mst = arg;
     om_rsp = rsp;
 
-    mtu = msp->msp_get_mtu(rsp);
+    mtu = mst->mst_get_mtu(rsp);
     if (mtu == 0) {
         /* The transport cannot support a transmission right now. */
         return MGMT_ERR_EUNKNOWN;
@@ -161,7 +161,7 @@ mynewt_smp_tx_rsp(struct smp_streamer *ss, void *rsp, void *arg)
             return MGMT_ERR_ENOMEM;
         }
 
-        rc = msp->msp_output(msp, frag);
+        rc = mst->mst_output(mst, frag);
         if (rc != 0) {
             /* Output function already freed mbuf. */
             return MGMT_ERR_EUNKNOWN;
@@ -178,7 +178,7 @@ mynewt_smp_free_buf(void *buf, void *arg)
 }
 
 static void
-mynewt_smp_process(struct mynewt_smp_transport *msp)
+mynewt_smp_process(struct mynewt_smp_transport *mst)
 {
     struct cbor_mbuf_reader reader;
     struct cbor_mbuf_writer writer;
@@ -191,13 +191,13 @@ mynewt_smp_process(struct mynewt_smp_transport *msp)
             .cfg = &mynewt_smp_cbor_cfg,
             .reader = &reader.r,
             .writer = &writer.enc,
-            .cb_arg = msp,
+            .cb_arg = mst,
         },
         .ss_tx_rsp = mynewt_smp_tx_rsp,
     };
 
     while (1) {
-        req = os_mqueue_get(&msp->msp_imq);
+        req = os_mqueue_get(&mst->mst_imq);
         if (req == NULL) {
             break;
         }
@@ -216,18 +216,18 @@ mynewt_smp_event_data_in(struct os_event *ev)
 }
 
 int
-mynewt_smp_transport_init(struct mynewt_smp_transport *msp,
+mynewt_smp_transport_init(struct mynewt_smp_transport *mst,
                           mynewt_smp_transport_out_fn *output_func,
                           mynewt_smp_transport_get_mtu_fn *get_mtu_func)
 {
     int rc;
 
-    *msp = (struct mynewt_smp_transport) {
-        .msp_output = output_func,
-        .msp_get_mtu = get_mtu_func,
+    *mst = (struct mynewt_smp_transport) {
+        .mst_output = output_func,
+        .mst_get_mtu = get_mtu_func,
     };
 
-    rc = os_mqueue_init(&msp->msp_imq, mynewt_smp_event_data_in, msp);
+    rc = os_mqueue_init(&mst->mst_imq, mynewt_smp_event_data_in, mst);
     if (rc != 0) {
         return rc;
     }
@@ -236,11 +236,11 @@ mynewt_smp_transport_init(struct mynewt_smp_transport *msp,
 }
 
 int
-mynewt_smp_rx_req(struct mynewt_smp_transport *msp, struct os_mbuf *req)
+mynewt_smp_rx_req(struct mynewt_smp_transport *mst, struct os_mbuf *req)
 {
     int rc;
 
-    rc = os_mqueue_put(&msp->msp_imq, mgmt_evq_get(), req);
+    rc = os_mqueue_put(&mst->mst_imq, mgmt_evq_get(), req);
     if (rc != 0) {
         os_mbuf_free_chain(req);
     }
