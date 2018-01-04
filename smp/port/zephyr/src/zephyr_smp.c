@@ -37,7 +37,7 @@ zephyr_smp_alloc_rsp(const void *req, void *arg)
         return NULL;
     }
     rsp_pkt->len = 0;
-    rsp_pkt->extra = req_pkt->extra;
+    memcpy(rsp_pkt->extra, req_pkt->extra, sizeof rsp_pkt->extra);
 
     return rsp_pkt;
 }

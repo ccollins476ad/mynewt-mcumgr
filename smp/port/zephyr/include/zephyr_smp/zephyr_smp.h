@@ -19,7 +19,7 @@ typedef int zephyr_smp_transport_out_fn(struct zephyr_smp_transport *zst,
  * MTU query function.  The supplied packet should contain a request received
  * from the peer whose MTU is being queried.  This function takes a packet
  * parameter because some transports store connection-specific information in
- * the packet (e.g., the BLE transport stores the connection pointer).
+ * the packet (e.g., the BLE transport stores the peer address).
  *
  * @return                      The transport's MTU;
  *                              0 if transmission is currently not possible.
