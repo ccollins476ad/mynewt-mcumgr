@@ -28,7 +28,6 @@
 extern "C" {
 #endif
 
-struct mynewt_smp_transport;
 struct smp_streamer;
 struct mgmt_hdr;
 
