@@ -26,18 +26,6 @@
 extern "C" {
 #endif
 
-#define IMG_MAX_IMGS		2
-
-#define IMG_HASH_STR		48
-
-/*
- * When accompanied by image, it's this structure followed by data.
- * Response contains just the offset.
- */
-struct img_upload_cmd {
-    uint32_t iuc_off;
-};
-
 /*
  * Response to list:
  * {
@@ -82,21 +70,15 @@ struct img_upload_cmd {
  * }
  */
 
-struct nmgr_hdr;
-struct os_mbuf;
-struct fs_file;
 struct mgmt_cbuf;
 
-struct nmgr_jbuf;
-
-int img_core_list(struct mgmt_cbuf *);
-int img_core_load(struct mgmt_cbuf *);
-int img_core_erase(struct mgmt_cbuf *);
-int img_state_read(struct mgmt_cbuf *cb);
-int img_state_write(struct mgmt_cbuf *njb);
-int img_find_by_ver(struct image_version *find, uint8_t *hash);
-int img_find_by_hash(uint8_t *find, struct image_version *ver);
-int img_cli_register(void);
+int img_mgmt_core_list(struct mgmt_cbuf *);
+int img_mgmt_core_load(struct mgmt_cbuf *);
+int img_mgmt_core_erase(struct mgmt_cbuf *);
+int img_mgmt_state_read(struct mgmt_cbuf *cb);
+int img_mgmt_state_write(struct mgmt_cbuf *njb);
+int img_mgmt_find_by_ver(struct image_version *find, uint8_t *hash);
+int img_mgmt_find_by_hash(uint8_t *find, struct image_version *ver);
 
 #ifdef __cplusplus
 }

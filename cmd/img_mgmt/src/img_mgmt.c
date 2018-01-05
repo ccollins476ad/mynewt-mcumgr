@@ -24,43 +24,43 @@
 #include "cborattr/cborattr.h"
 #include "mgmt/mgmt.h"
 
-#include "img/img.h"
-#include "img/image.h"
-#include "img/img_impl.h"
-#include "img_priv.h"
+#include "img_mgmt/image.h"
+#include "img_mgmt/img_mgmt.h"
+#include "img_mgmt/img_mgmt_impl.h"
+#include "img_mgmt_priv.h"
 
-#define IMG_MAX_CHUNK_SIZE 512
+#define IMG_MGMT_MAX_CHUNK_SIZE 512
 
-static int img_upload(struct mgmt_cbuf *);
-static int img_erase(struct mgmt_cbuf *);
+static mgmt_handler_fn img_mgmt_upload;
+static mgmt_handler_fn img_mgmt_erase;
 
-static const struct mgmt_handler img_nmgr_handlers[] = {
-    [IMG_NMGR_ID_STATE] = {
-        .mh_read = img_state_read,
-        .mh_write = img_state_write,
+static const struct mgmt_handler img_mgmt_handlers[] = {
+    [IMG_MGMT_ID_STATE] = {
+        .mh_read = img_mgmt_state_read,
+        .mh_write = img_mgmt_state_write,
     },
-    [IMG_NMGR_ID_UPLOAD] = {
+    [IMG_MGMT_ID_UPLOAD] = {
         .mh_read = NULL,
-        .mh_write = img_upload
+        .mh_write = img_mgmt_upload
     },
-    [IMG_NMGR_ID_ERASE] = {
+    [IMG_MGMT_ID_ERASE] = {
         .mh_read = NULL,
-        .mh_write = img_erase
+        .mh_write = img_mgmt_erase
     },
 #if 0
-    [IMG_NMGR_ID_CORELIST] = {
-#if MYNEWT_VAL(IMG_COREDUMP)
-        .mh_read = img_core_list,
+    [IMG_MGMT_ID_CORELIST] = {
+#if MYNEWT_VAL(IMG_MGMT_COREDUMP)
+        .mh_read = img_mgmt_core_list,
         .mh_write = NULL
 #else
         .mh_read = NULL,
         .mh_write = NULL
 #endif
     },
-    [IMG_NMGR_ID_CORELOAD] = {
-#if MYNEWT_VAL(IMG_COREDUMP)
-        .mh_read = img_core_load,
-        .mh_write = img_core_erase,
+    [IMG_MGMT_ID_CORELOAD] = {
+#if MYNEWT_VAL(IMG_MGMT_COREDUMP)
+        .mh_read = img_mgmt_core_load,
+        .mh_write = img_mgmt_core_erase,
 #else
         .mh_read = NULL,
         .mh_write = NULL
@@ -69,12 +69,12 @@ static const struct mgmt_handler img_nmgr_handlers[] = {
 #endif
 };
 
-#define IMG_HANDLER_CNT                                                \
-    sizeof(img_nmgr_handlers) / sizeof(img_nmgr_handlers[0])
+#define IMG_MGMT_HANDLER_CNT                                    \
+    sizeof(img_mgmt_handlers) / sizeof(img_mgmt_handlers[0])
 
-static struct mgmt_group img_nmgr_group = {
-    .mg_handlers = (struct mgmt_handler *)img_nmgr_handlers,
-    .mg_handlers_count = IMG_HANDLER_CNT,
+static struct mgmt_group img_mgmt_group = {
+    .mg_handlers = (struct mgmt_handler *)img_mgmt_handlers,
+    .mg_handlers_count = IMG_MGMT_HANDLER_CNT,
     .mg_group_id = MGMT_GROUP_ID_IMAGE,
 };
 
@@ -82,16 +82,16 @@ static struct {
     off_t off;
     size_t image_len;
     bool uploading;
-} img_ctxt;
+} img_mgmt_ctxt;
 
 static int
-img_img_tlvs(const struct image_header *hdr,
-             int slot, off_t *start_off, off_t *end_off)
+img_mgmt_tlvs(const struct image_header *hdr,
+              int slot, off_t *start_off, off_t *end_off)
 {
     struct image_tlv_info tlv_info;
     int rc;
 
-    rc = img_impl_read(slot, *start_off, &tlv_info, sizeof tlv_info);
+    rc = img_mgmt_impl_read(slot, *start_off, &tlv_info, sizeof tlv_info);
     if (rc != 0) {
         return -1;
     }
@@ -122,8 +122,8 @@ img_img_tlvs(const struct image_header *hdr,
  * XXX Define return code macros.
  */
 int
-img_read_info(int image_slot, struct image_version *ver, uint8_t *hash,
-              uint32_t *flags)
+img_mgmt_read_info(int image_slot, struct image_version *ver, uint8_t *hash,
+                   uint32_t *flags)
 {
     struct image_header hdr;
     struct image_tlv tlv;
@@ -131,7 +131,7 @@ img_read_info(int image_slot, struct image_version *ver, uint8_t *hash,
     uint32_t data_end;
     int rc;
 
-    rc = img_impl_read(image_slot, 0, &hdr, sizeof hdr);
+    rc = img_mgmt_impl_read(image_slot, 0, &hdr, sizeof hdr);
     if (rc != 0) {
         return -1;
     }
@@ -155,29 +155,29 @@ img_read_info(int image_slot, struct image_version *ver, uint8_t *hash,
 
     /* The hash is contained in a TLV after the image. */
     data_off = hdr.ih_hdr_size + hdr.ih_img_size;
-    rc = img_img_tlvs(&hdr, image_slot, &data_off, &data_end);
+    rc = img_mgmt_tlvs(&hdr, image_slot, &data_off, &data_end);
     if (rc != 0) {
         return rc;
     }
 
     while (data_off + sizeof tlv <= data_end) {
-        rc = img_impl_read(image_slot, data_off, &tlv, sizeof tlv);
+        rc = img_mgmt_impl_read(image_slot, data_off, &tlv, sizeof tlv);
         if (rc != 0) {
             return 0;
         }
         if (tlv.it_type == 0xff && tlv.it_len == 0xffff) {
             return 1;
         }
-        if (tlv.it_type != IMAGE_TLV_SHA256 || tlv.it_len != IMG_HASH_LEN) {
+        if (tlv.it_type != IMAGE_TLV_SHA256 || tlv.it_len != IMAGE_HASH_LEN) {
             data_off += sizeof tlv + tlv.it_len;
             continue;
         }
         data_off += sizeof tlv;
         if (hash != NULL) {
-            if (data_off + IMG_HASH_LEN > data_end) {
+            if (data_off + IMAGE_HASH_LEN > data_end) {
                 return 0;
             }
-            rc = img_impl_read(image_slot, data_off, hash, IMG_HASH_LEN);
+            rc = img_mgmt_impl_read(image_slot, data_off, hash, IMAGE_HASH_LEN);
             if (rc != 0) {
                 return 0;
             }
@@ -193,13 +193,13 @@ img_read_info(int image_slot, struct image_version *ver, uint8_t *hash,
  * or -1 if not found.
  */
 int
-img_find_by_ver(struct image_version *find, uint8_t *hash)
+img_mgmt_find_by_ver(struct image_version *find, uint8_t *hash)
 {
     int i;
     struct image_version ver;
 
     for (i = 0; i < 2; i++) {
-        if (img_read_info(i, &ver, hash, NULL) != 0) {
+        if (img_mgmt_read_info(i, &ver, hash, NULL) != 0) {
             continue;
         }
         if (!memcmp(find, &ver, sizeof(ver))) {
@@ -214,16 +214,16 @@ img_find_by_ver(struct image_version *find, uint8_t *hash)
  * or -1 if not found.
  */
 int
-img_find_by_hash(uint8_t *find, struct image_version *ver)
+img_mgmt_find_by_hash(uint8_t *find, struct image_version *ver)
 {
     int i;
-    uint8_t hash[IMG_HASH_LEN];
+    uint8_t hash[IMAGE_HASH_LEN];
 
     for (i = 0; i < 2; i++) {
-        if (img_read_info(i, ver, hash, NULL) != 0) {
+        if (img_mgmt_read_info(i, ver, hash, NULL) != 0) {
             continue;
         }
-        if (!memcmp(hash, find, IMG_HASH_LEN)) {
+        if (!memcmp(hash, find, IMAGE_HASH_LEN)) {
             return i;
         }
     }
@@ -231,12 +231,12 @@ img_find_by_hash(uint8_t *find, struct image_version *ver)
 }
 
 static int
-img_erase(struct mgmt_cbuf *cb)
+img_mgmt_erase(struct mgmt_cbuf *cb)
 {
     CborError err;
     int rc;
 
-    rc = img_impl_erase_slot();
+    rc = img_mgmt_impl_erase_slot();
 
     err = 0;
     err |= cbor_encode_text_stringz(&cb->encoder, "rc");
@@ -250,7 +250,7 @@ img_erase(struct mgmt_cbuf *cb)
 }
 
 static int
-img_write_upload_rsp(struct mgmt_cbuf *cb, int status)
+img_mgmt_write_upload_rsp(struct mgmt_cbuf *cb, int status)
 {
     CborError err;
 
@@ -258,7 +258,7 @@ img_write_upload_rsp(struct mgmt_cbuf *cb, int status)
     err |= cbor_encode_text_stringz(&cb->encoder, "rc");
     err |= cbor_encode_int(&cb->encoder, status);
     err |= cbor_encode_text_stringz(&cb->encoder, "off");
-    err |= cbor_encode_int(&cb->encoder, img_ctxt.off);
+    err |= cbor_encode_int(&cb->encoder, img_mgmt_ctxt.off);
 
     if (err != 0) {
         return MGMT_ERR_ENOMEM;
@@ -268,7 +268,7 @@ img_write_upload_rsp(struct mgmt_cbuf *cb, int status)
 
 /* XXX: Rename */
 static int
-img_upload_first(struct mgmt_cbuf *cb, const uint8_t *req_data, size_t len)
+img_mgmt_upload_first(struct mgmt_cbuf *cb, const uint8_t *req_data, size_t len)
 {
     struct image_header hdr;
     int rc;
@@ -282,29 +282,29 @@ img_upload_first(struct mgmt_cbuf *cb, const uint8_t *req_data, size_t len)
         return MGMT_ERR_EINVAL;
     }
 
-    if (img_state_slot_in_use(1)) {
+    if (img_mgmt_slot_in_use(1)) {
         /* No free slot. */
         return MGMT_ERR_ENOMEM;
     }
 
-    rc = img_impl_erase_slot();
+    rc = img_mgmt_impl_erase_slot();
     if (rc != 0) {
         return rc;
     }
 
-    img_ctxt.uploading = true;
-    img_ctxt.off = 0;
-    img_ctxt.image_len = 0;
+    img_mgmt_ctxt.uploading = true;
+    img_mgmt_ctxt.off = 0;
+    img_mgmt_ctxt.image_len = 0;
 
     return 0;
 }
 
 static int
-img_upload(struct mgmt_cbuf *cb)
+img_mgmt_upload(struct mgmt_cbuf *cb)
 {
     long long unsigned int off = UINT_MAX;
     long long unsigned int size = UINT_MAX;
-    uint8_t img_data[IMG_MAX_CHUNK_SIZE];
+    uint8_t img_mgmt_data[IMG_MGMT_MAX_CHUNK_SIZE];
     size_t data_len = 0;
     bool last;
     int rc;
@@ -313,9 +313,9 @@ img_upload(struct mgmt_cbuf *cb)
         [0] = {
             .attribute = "data",
             .type = CborAttrByteStringType,
-            .addr.bytestring.data = img_data,
+            .addr.bytestring.data = img_mgmt_data,
             .addr.bytestring.len = &data_len,
-            .len = sizeof(img_data)
+            .len = sizeof(img_mgmt_data)
         },
         [1] = {
             .attribute = "len",
@@ -338,42 +338,42 @@ img_upload(struct mgmt_cbuf *cb)
     }
 
     if (off == 0) {
-        rc = img_upload_first(cb, img_data, data_len);
+        rc = img_mgmt_upload_first(cb, img_mgmt_data, data_len);
         if (rc != 0) {
             return rc;
         }
-        img_ctxt.image_len = size;
+        img_mgmt_ctxt.image_len = size;
     } else {
-        if (!img_ctxt.uploading) {
+        if (!img_mgmt_ctxt.uploading) {
             return MGMT_ERR_EINVAL;
         }
 
-        if (off != img_ctxt.off) {
+        if (off != img_mgmt_ctxt.off) {
             /* Invalid offset. Drop the data, and respond with the offset we're
              * expecting data for.
              */
-            return img_write_upload_rsp(cb, 0);
+            return img_mgmt_write_upload_rsp(cb, 0);
         }
     }
 
     if (data_len > 0) {
-        last = img_ctxt.off + data_len == img_ctxt.image_len;
-        rc = img_impl_write_image_data(off, img_data, data_len, last);
+        last = img_mgmt_ctxt.off + data_len == img_mgmt_ctxt.image_len;
+        rc = img_mgmt_impl_write_image_data(off, img_mgmt_data, data_len, last);
         if (rc != 0) {
             return rc;
         }
 
-        img_ctxt.off += data_len;
+        img_mgmt_ctxt.off += data_len;
         if (last) {
-            img_ctxt.uploading = false;
+            img_mgmt_ctxt.uploading = false;
         }
     }
 
-    return img_write_upload_rsp(cb, 0);
+    return img_mgmt_write_upload_rsp(cb, 0);
 }
 
 int
-img_group_register(void)
+img_mgmt_group_register(void)
 {
-    return mgmt_group_register(&img_nmgr_group);
+    return mgmt_group_register(&img_mgmt_group);
 }

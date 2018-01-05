@@ -1,7 +1,7 @@
 #include "sysinit/sysinit.h"
 
 int
-img_impl_erase_slot(void)
+img_mgmt_impl_erase_slot(void)
 {
     const struct flash_area *fa;
     bool empty;
@@ -28,7 +28,7 @@ img_impl_erase_slot(void)
 }
 
 int
-img_impl_write_pending(int slot, bool permanent)
+img_mgmt_impl_write_pending(int slot, bool permanent)
 {
     uint32_t image_flags;
     uint8_t state_flags;
@@ -87,7 +87,7 @@ img_impl_write_pending(int slot, bool permanent)
 }
 
 int
-img_impl_write_confirmed(void)
+img_mgmt_impl_write_confirmed(void)
 {
     /* Confirm the unified image or loader in slot 0. */
     rc = boot_set_confirmed();
@@ -112,8 +112,8 @@ img_impl_write_confirmed(void)
 }
 
 int
-img_impl_read(int slot, unsigned int offset, void *dst,
-              unsigned int num_bytes)
+img_mgmt_impl_read(int slot, unsigned int offset, void *dst,
+                   unsigned int num_bytes)
 {
     const struct flash_area *fa;
     int area_id;
@@ -135,8 +135,8 @@ img_impl_read(int slot, unsigned int offset, void *dst,
 }
 
 int
-img_impl_write_image_data(unsigned int offset, const void *data,
-                          unsigned int num_bytes, bool last)
+img_mgmt_impl_write_image_data(unsigned int offset, const void *data,
+                               unsigned int num_bytes, bool last)
 {
     const struct flash_area *fa;
     int rc;
@@ -156,32 +156,32 @@ img_impl_write_image_data(unsigned int offset, const void *data,
 }
 
 int
-img_impl_swap_type(void)
+img_mgmt_impl_swap_type(void)
 {
     switch (boot_swap_type()) {
     case BOOT_SWAP_TYPE_NONE:
-        return IMG_SWAP_TYPE_NONE;
+        return IMG_MGMT_SWAP_TYPE_NONE;
     case BOOT_SWAP_TYPE_TEST:
-        return IMG_SWAP_TYPE_TEST;
+        return IMG_MGMT_SWAP_TYPE_TEST;
     case BOOT_SWAP_TYPE_PERM:
-        return IMG_SWAP_TYPE_PERM;
+        return IMG_MGMT_SWAP_TYPE_PERM;
     case BOOT_SWAP_TYPE_REVERT:
-        return IMG_SWAP_TYPE_REVERT;
+        return IMG_MGMT_SWAP_TYPE_REVERT;
     default:
         assert(0);
-        return IMG_SWAP_TYPE_NONE;
+        return IMG_MGMT_SWAP_TYPE_NONE;
     }
 }
 
 void
-img_module_init(void)
+img_mgmt_module_init(void)
 {
     int rc;
 
     /* Ensure this function only gets called by sysinit. */
     SYSINIT_ASSERT_ACTIVE();
 
-    rc = img_group_register();
+    rc = img_mgmt_group_register();
     SYSINIT_PANIC_ASSERT(rc == 0);
 
 #if MYNEWT_VAL(IMGMGR_CLI)

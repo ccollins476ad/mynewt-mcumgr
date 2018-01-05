@@ -24,13 +24,13 @@
 #include "cborattr/cborattr.h"
 #include "cbor.h"
 #include "mgmt/mgmt.h"
-#include "img/img.h"
-#include "img/image.h"
-#include "img_priv.h"
-#include "img/img_impl.h"
+#include "img_mgmt/img_mgmt.h"
+#include "img_mgmt/image.h"
+#include "img_mgmt_priv.h"
+#include "img_mgmt/img_mgmt_impl.h"
 
 uint8_t
-img_state_flags(int query_slot)
+img_mgmt_state_flags(int query_slot)
 {
     uint8_t flags;
     int swap_type;
@@ -42,36 +42,36 @@ img_state_flags(int query_slot)
     /* Determine if this is is pending or confirmed (only applicable for
      * unified images and loaders.
      */
-    swap_type = img_impl_swap_type();
+    swap_type = img_mgmt_impl_swap_type();
     switch (swap_type) {
-    case IMG_SWAP_TYPE_NONE:
+    case IMG_MGMT_SWAP_TYPE_NONE:
         if (query_slot == 0) {
-            flags |= IMG_STATE_F_CONFIRMED;
-            flags |= IMG_STATE_F_ACTIVE;
+            flags |= IMG_MGMT_STATE_F_CONFIRMED;
+            flags |= IMG_MGMT_STATE_F_ACTIVE;
         }
         break;
 
-    case IMG_SWAP_TYPE_TEST:
+    case IMG_MGMT_SWAP_TYPE_TEST:
         if (query_slot == 0) {
-            flags |= IMG_STATE_F_CONFIRMED;
+            flags |= IMG_MGMT_STATE_F_CONFIRMED;
         } else if (query_slot == 1) {
-            flags |= IMG_STATE_F_PENDING;
+            flags |= IMG_MGMT_STATE_F_PENDING;
         }
         break;
 
-    case IMG_SWAP_TYPE_PERM:
+    case IMG_MGMT_SWAP_TYPE_PERM:
         if (query_slot == 0) {
-            flags |= IMG_STATE_F_CONFIRMED;
+            flags |= IMG_MGMT_STATE_F_CONFIRMED;
         } else if (query_slot == 1) {
-            flags |= IMG_STATE_F_PENDING | IMG_STATE_F_PERMANENT;
+            flags |= IMG_MGMT_STATE_F_PENDING | IMG_MGMT_STATE_F_PERMANENT;
         }
         break;
 
-    case IMG_SWAP_TYPE_REVERT:
+    case IMG_MGMT_SWAP_TYPE_REVERT:
         if (query_slot == 0) {
-            flags |= IMG_STATE_F_ACTIVE;
+            flags |= IMG_MGMT_STATE_F_ACTIVE;
         } else if (query_slot == 1) {
-            flags |= IMG_STATE_F_CONFIRMED;
+            flags |= IMG_MGMT_STATE_F_CONFIRMED;
         }
         break;
     }
@@ -79,46 +79,46 @@ img_state_flags(int query_slot)
     /* Slot 0 is always active. */
     /* XXX: The slot 0 assumption only holds when running from flash. */
     if (query_slot == 0) {
-        flags |= IMG_STATE_F_ACTIVE;
+        flags |= IMG_MGMT_STATE_F_ACTIVE;
     }
 
     return flags;
 }
 
 static int
-img_state_any_pending(void)
+img_mgmt_state_any_pending(void)
 {
-    return img_state_flags(0) & IMG_STATE_F_PENDING ||
-           img_state_flags(1) & IMG_STATE_F_PENDING;
+    return img_mgmt_state_flags(0) & IMG_MGMT_STATE_F_PENDING ||
+           img_mgmt_state_flags(1) & IMG_MGMT_STATE_F_PENDING;
 }
 
 int
-img_state_slot_in_use(int slot)
+img_mgmt_slot_in_use(int slot)
 {
     uint8_t state_flags;
 
-    state_flags = img_state_flags(slot);
-    return state_flags & IMG_STATE_F_ACTIVE       ||
-           state_flags & IMG_STATE_F_CONFIRMED    ||
-           state_flags & IMG_STATE_F_PENDING;
+    state_flags = img_mgmt_state_flags(slot);
+    return state_flags & IMG_MGMT_STATE_F_ACTIVE       ||
+           state_flags & IMG_MGMT_STATE_F_CONFIRMED    ||
+           state_flags & IMG_MGMT_STATE_F_PENDING;
 }
 
 int
-img_state_set_pending(int slot, int permanent)
+img_mgmt_state_set_pending(int slot, int permanent)
 {
     uint8_t state_flags;
     int rc;
 
-    state_flags = img_state_flags(slot);
+    state_flags = img_mgmt_state_flags(slot);
 
     /* Unconfirmed slots are always runable.  A confirmed slot can only be
      * run if it is a loader in a split image setup.
      */
-    if (state_flags & IMG_STATE_F_CONFIRMED && slot != 0) {
+    if (state_flags & IMG_MGMT_STATE_F_CONFIRMED && slot != 0) {
         return MGMT_ERR_EBADSTATE;
     }
 
-    rc = img_impl_write_pending(slot, permanent);
+    rc = img_mgmt_impl_write_pending(slot, permanent);
     if (rc != 0) {
         return MGMT_ERR_EUNKNOWN;
     }
@@ -127,16 +127,16 @@ img_state_set_pending(int slot, int permanent)
 }
 
 int
-img_state_confirm(void)
+img_mgmt_state_confirm(void)
 {
     int rc;
 
     /* Confirm disallowed if a test is pending. */
-    if (img_state_any_pending()) {
+    if (img_mgmt_state_any_pending()) {
         return MGMT_ERR_EBADSTATE;
     }
 
-    rc = img_impl_write_confirmed();
+    rc = img_mgmt_impl_write_confirmed();
     if (rc != 0) {
         return MGMT_ERR_EUNKNOWN;
     }
@@ -145,14 +145,14 @@ img_state_confirm(void)
 }
 
 int
-img_state_read(struct mgmt_cbuf *cb)
+img_mgmt_state_read(struct mgmt_cbuf *cb)
 {
     int i;
     int rc;
     uint32_t flags;
     struct image_version ver;
-    uint8_t hash[IMG_HASH_LEN]; /* SHA256 hash */
-    char vers_str[IMG_NMGR_MAX_VER];
+    uint8_t hash[IMAGE_HASH_LEN]; /* SHA256 hash */
+    char vers_str[IMG_MGMT_MAX_VER];
     int any_non_bootable;
     uint8_t state_flags;
     CborError g_err = CborNoError;
@@ -166,7 +166,7 @@ img_state_read(struct mgmt_cbuf *cb)
     g_err |= cbor_encoder_create_array(&cb->encoder, &images,
                                        CborIndefiniteLength);
     for (i = 0; i < 2; i++) {
-        rc = img_read_info(i, &ver, hash, &flags);
+        rc = img_mgmt_read_info(i, &ver, hash, &flags);
         if (rc != 0) {
             continue;
         }
@@ -175,7 +175,7 @@ img_state_read(struct mgmt_cbuf *cb)
             any_non_bootable = 1;
         }
 
-        state_flags = img_state_flags(i);
+        state_flags = img_mgmt_state_flags(i);
 
         g_err |= cbor_encoder_create_map(&images, &image,
                                          CborIndefiniteLength);
@@ -183,30 +183,30 @@ img_state_read(struct mgmt_cbuf *cb)
         g_err |= cbor_encode_int(&image, i);
 
         g_err |= cbor_encode_text_stringz(&image, "version");
-        img_ver_str(&ver, vers_str);
+        img_mgmt_ver_str(&ver, vers_str);
         g_err |= cbor_encode_text_stringz(&image, vers_str);
 
         g_err |= cbor_encode_text_stringz(&image, "hash");
-        g_err |= cbor_encode_byte_string(&image, hash, IMG_HASH_LEN);
+        g_err |= cbor_encode_byte_string(&image, hash, IMAGE_HASH_LEN);
 
         g_err |= cbor_encode_text_stringz(&image, "bootable");
         g_err |= cbor_encode_boolean(&image, !(flags & IMAGE_F_NON_BOOTABLE));
 
         g_err |= cbor_encode_text_stringz(&image, "pending");
         g_err |= cbor_encode_boolean(&image,
-                                     state_flags & IMG_STATE_F_PENDING);
+                                     state_flags & IMG_MGMT_STATE_F_PENDING);
 
         g_err |= cbor_encode_text_stringz(&image, "confirmed");
         g_err |= cbor_encode_boolean(&image,
-                                     state_flags & IMG_STATE_F_CONFIRMED);
+                                     state_flags & IMG_MGMT_STATE_F_CONFIRMED);
 
         g_err |= cbor_encode_text_stringz(&image, "active");
         g_err |= cbor_encode_boolean(&image,
-                                     state_flags & IMG_STATE_F_ACTIVE);
+                                     state_flags & IMG_MGMT_STATE_F_ACTIVE);
 
         g_err |= cbor_encode_text_stringz(&image, "permanent");
         g_err |= cbor_encode_boolean(&image,
-                                     state_flags & IMG_STATE_F_PERMANENT);
+                                     state_flags & IMG_MGMT_STATE_F_PERMANENT);
 
         g_err |= cbor_encoder_close_container(&images, &image);
     }
@@ -223,9 +223,9 @@ img_state_read(struct mgmt_cbuf *cb)
 }
 
 int
-img_state_write(struct mgmt_cbuf *cb)
+img_mgmt_state_write(struct mgmt_cbuf *cb)
 {
-    uint8_t hash[IMG_HASH_LEN];
+    uint8_t hash[IMAGE_HASH_LEN];
     size_t hash_len = 0;
     bool confirm;
     int slot;
@@ -262,7 +262,7 @@ img_state_write(struct mgmt_cbuf *cb)
             return MGMT_ERR_EINVAL;
         }
     } else {
-        slot = img_find_by_hash(hash, NULL);
+        slot = img_mgmt_find_by_hash(hash, NULL);
         if (slot < 0) {
             return MGMT_ERR_EINVAL;
         }
@@ -270,16 +270,16 @@ img_state_write(struct mgmt_cbuf *cb)
 
     if (slot == 0 && confirm) {
         /* Confirm current setup. */
-        rc = img_state_confirm();
+        rc = img_mgmt_state_confirm();
     } else {
-        rc = img_state_set_pending(slot, confirm);
+        rc = img_mgmt_state_set_pending(slot, confirm);
     }
     if (rc != 0) {
         return rc;
     }
 
     /* Send the current image state in the response. */
-    rc = img_state_read(cb);
+    rc = img_mgmt_state_read(cb);
     if (rc != 0) {
         return rc;
     }

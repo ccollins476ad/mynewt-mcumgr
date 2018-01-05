@@ -41,6 +41,9 @@ extern "C" {
  */
 #define IMAGE_TLV_SHA256            0x10   /* SHA256 of image hdr and body */
 
+/** Image TLV-specific definitions. */
+#define IMAGE_HASH_LEN              32
+
 struct image_version {
     uint8_t iv_major;
     uint8_t iv_minor;

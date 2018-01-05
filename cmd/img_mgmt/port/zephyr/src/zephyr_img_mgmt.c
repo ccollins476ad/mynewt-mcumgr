@@ -6,14 +6,14 @@
 #include <dfu/mcuboot.h>
 #include <dfu/flash_img.h>
 #include "mgmt/mgmt.h"
-#include "img/img_impl.h"
-#include "img/img.h"
+#include "img_mgmt/img_mgmt_impl.h"
+#include "img_mgmt/img_mgmt.h"
 
 static struct device *zephyr_img_flash_dev;
 static struct flash_img_context zephyr_img_flash_ctxt;
 
 static int
-img_impl_flash_check_empty(off_t offset, size_t size, bool *out_empty)
+img_mgmt_impl_flash_check_empty(off_t offset, size_t size, bool *out_empty)
 {
     uint32_t data[16];
     off_t addr;
@@ -50,7 +50,7 @@ img_impl_flash_check_empty(off_t offset, size_t size, bool *out_empty)
 }
 
 static off_t
-img_impl_abs_offset(int slot, off_t sub_offset)
+img_mgmt_impl_abs_offset(int slot, off_t sub_offset)
 {
     off_t slot_start;
 
@@ -73,14 +73,14 @@ img_impl_abs_offset(int slot, off_t sub_offset)
 }
 
 int
-img_impl_erase_slot(void)
+img_mgmt_impl_erase_slot(void)
 {
     bool empty;
     int rc;
 
-    rc = img_impl_flash_check_empty(FLASH_AREA_IMAGE_1_OFFSET,
-                                    FLASH_AREA_IMAGE_1_SIZE,
-                                    &empty);
+    rc = img_mgmt_impl_flash_check_empty(FLASH_AREA_IMAGE_1_OFFSET,
+                                         FLASH_AREA_IMAGE_1_SIZE,
+                                         &empty);
     if (rc != 0) {
         return MGMT_ERR_EUNKNOWN;
     }
@@ -96,7 +96,7 @@ img_impl_erase_slot(void)
 }
 
 int
-img_impl_write_pending(int slot, bool permanent)
+img_mgmt_impl_write_pending(int slot, bool permanent)
 {
     int rc;
 
@@ -113,7 +113,7 @@ img_impl_write_pending(int slot, bool permanent)
 }
 
 int
-img_impl_write_confirmed(void)
+img_mgmt_impl_write_confirmed(void)
 {
     int rc;
 
@@ -126,13 +126,13 @@ img_impl_write_confirmed(void)
 }
 
 int
-img_impl_read(int slot, unsigned int offset, void *dst,
-              unsigned int num_bytes)
+img_mgmt_impl_read(int slot, unsigned int offset, void *dst,
+                   unsigned int num_bytes)
 {
     off_t abs_offset;
     int rc;
 
-    abs_offset = img_impl_abs_offset(slot, offset);
+    abs_offset = img_mgmt_impl_abs_offset(slot, offset);
     rc = flash_read(zephyr_img_flash_dev, abs_offset, dst, num_bytes);
     if (rc != 0) {
         return MGMT_ERR_EUNKNOWN;
@@ -142,8 +142,8 @@ img_impl_read(int slot, unsigned int offset, void *dst,
 }
 
 int
-img_impl_write_image_data(unsigned int offset, const void *data,
-                          unsigned int num_bytes, bool last)
+img_mgmt_impl_write_image_data(unsigned int offset, const void *data,
+                               unsigned int num_bytes, bool last)
 {
     int rc;
 
@@ -169,25 +169,25 @@ img_impl_write_image_data(unsigned int offset, const void *data,
 }
 
 int
-img_impl_swap_type(void)
+img_mgmt_impl_swap_type(void)
 {
     switch (boot_swap_type()) {
     case BOOT_SWAP_TYPE_NONE:
-        return IMG_SWAP_TYPE_NONE;
+        return IMG_MGMT_SWAP_TYPE_NONE;
     case BOOT_SWAP_TYPE_TEST:
-        return IMG_SWAP_TYPE_TEST;
+        return IMG_MGMT_SWAP_TYPE_TEST;
     case BOOT_SWAP_TYPE_PERM:
-        return IMG_SWAP_TYPE_PERM;
+        return IMG_MGMT_SWAP_TYPE_PERM;
     case BOOT_SWAP_TYPE_REVERT:
-        return IMG_SWAP_TYPE_REVERT;
+        return IMG_MGMT_SWAP_TYPE_REVERT;
     default:
         assert(0);
-        return IMG_SWAP_TYPE_NONE;
+        return IMG_MGMT_SWAP_TYPE_NONE;
     }
 }
 
 static int
-img_impl_init(struct device *dev)
+img_mgmt_impl_init(struct device *dev)
 {
     ARG_UNUSED(dev);
 
@@ -198,4 +198,4 @@ img_impl_init(struct device *dev)
     return 0;
 }
 
-SYS_INIT(img_impl_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
+SYS_INIT(img_mgmt_impl_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);

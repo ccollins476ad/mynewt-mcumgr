@@ -22,64 +22,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "img/image.h"
-#include "img/img.h"
-
-// Removed due to missing strsep().
-#if 0
-int
-img_ver_parse(char *src, struct image_version *ver)
-{
-    unsigned long ul;
-    char *tok;
-    char *nxt;
-    char *ep;
-
-    memset(ver, 0, sizeof(*ver));
-
-    nxt = src;
-    tok = strsep(&nxt, ".");
-    ul = strtoul(tok, &ep, 10);
-    if (tok[0] == '\0' || ep[0] != '\0' || ul > UINT8_MAX) {
-        return -1;
-    }
-    ver->iv_major = ul;
-    if (nxt == NULL) {
-        return 0;
-    }
-    tok = strsep(&nxt, ".");
-    ul = strtoul(tok, &ep, 10);
-    if (tok[0] == '\0' || ep[0] != '\0' || ul > UINT8_MAX) {
-        return -1;
-    }
-    ver->iv_minor = ul;
-    if (nxt == NULL) {
-        return 0;
-    }
-
-    tok = strsep(&nxt, ".");
-    ul = strtoul(tok, &ep, 10);
-    if (tok[0] == '\0' || ep[0] != '\0' || ul > UINT16_MAX) {
-        return -1;
-    }
-    ver->iv_revision = ul;
-    if (nxt == NULL) {
-        return 0;
-    }
-
-    tok = nxt;
-    ul = strtoul(tok, &ep, 10);
-    if (tok[0] == '\0' || ep[0] != '\0' || ul > UINT32_MAX) {
-        return -1;
-    }
-    ver->iv_build_num = ul;
-
-    return 0;
-}
-#endif
+#include "img_mgmt/image.h"
+#include "img_mgmt/img_mgmt.h"
 
 int
-img_ver_str(const struct image_version *ver, char *dst)
+img_mgmt_ver_str(const struct image_version *ver, char *dst)
 {
     if (ver->iv_build_num) {
         return sprintf(dst, "%u.%u.%u.%lu",
