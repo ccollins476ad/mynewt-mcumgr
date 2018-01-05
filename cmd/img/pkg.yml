@@ -17,8 +17,8 @@
 # under the License.
 #
 
-pkg.name: img/port/mynewt
-pkg.description: XXX
+pkg.name: cmd/img
+pkg.description: Library for image uploading.
 pkg.author: "Apache Mynewt <dev@mynewt.apache.org>"
 pkg.homepage: "http://mynewt.apache.org/"
 pkg.keywords:
@@ -27,5 +27,20 @@ pkg.deps:
     - '@apache-mynewt-core/boot/split'
     - '@apache-mynewt-core/encoding/base64'
     - '@apache-mynewt-core/sys/flash_map'
-    - '@mynewt-mcumgr/img'
     - '@mynewt-mcumgr/mgmt'
+
+pkg.req_apis:
+    - newtmgr
+    - bootloader
+
+pkg.deps.IMG_FS:
+    - '@apache-mynewt-core/fs/fs'
+
+pkg.deps.IMG_COREDUMP:
+    - '@apache-mynewt-core/sys/coredump'
+
+pkg.deps.IMG_SHELL:
+    - '@apache-mynewt-core/sys/shell'
+
+pkg.init:
+    img_module_init: 500
