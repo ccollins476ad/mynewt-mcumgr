@@ -1,9 +1,11 @@
 #ifndef H_IMG_MGMT_IMPL_
 #define H_IMG_MGMT_IMPL_
 
-/* This file declares implementation-specific functions required by image
- * management.  Each function must be defined in a way that is compatible with
- * the host OS.
+/**
+ * @file
+ * @brief Declares implementation-specific functions required by image
+ * management.  The default stubs can be overridden with functions that are
+ * compatible with the host OS.
  */
 
 /**

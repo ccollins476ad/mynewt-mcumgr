@@ -1,6 +1,13 @@
 #ifndef H_OS_MGMT_IMPL_
 #define H_OS_MGMT_IMPL_
 
+/**
+ * @file
+ * @brief Declares implementation-specific functions required by OS management.
+ * The default stubs can be overridden with functions that are compatible with
+ * the host OS.
+ */
+
 struct os_mgmt_task_info;
 
 /**
