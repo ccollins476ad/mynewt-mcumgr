@@ -146,7 +146,8 @@ mgmt_cbuf_init(struct mgmt_cbuf *cbuf, struct mgmt_streamer *streamer)
 {
     int rc;
 
-    rc = cbor_parser_cust_reader_init(streamer->reader, 0, &cbuf->parser, &cbuf->it);
+    rc = cbor_parser_cust_reader_init(streamer->reader, 0, &cbuf->parser,
+                                      &cbuf->it);
     if (rc != CborNoError) {
         return mgmt_err_from_cbor(rc);
     }

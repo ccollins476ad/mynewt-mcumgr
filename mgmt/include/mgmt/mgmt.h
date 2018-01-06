@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-/* MTU for newtmgr responses */
+/* MTU for management responses */
 #define MGMT_MAX_MTU            (1024)
 
 #define MGMT_OP_READ            (0)
@@ -60,9 +60,10 @@ extern "C" {
 #define MGMT_ERR_ENOENT         (5)
 #define MGMT_ERR_EBADSTATE      (6)     /* Current state disallows command. */
 #define MGMT_ERR_EMSGSIZE       (7)     /* Response too large. */
+#define MGMT_ERR_ENOTSUP        (8)     /* Command not supported. */
 #define MGMT_ERR_EPERUSER       (256)
 
-#define MGMT_HDR_SIZE       (8)
+#define MGMT_HDR_SIZE           (8)
 
 struct mgmt_hdr {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__

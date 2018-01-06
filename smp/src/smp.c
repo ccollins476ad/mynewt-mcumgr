@@ -158,7 +158,7 @@ smp_handle_single_payload(struct mgmt_cbuf *cbuf,
 
     handler = mgmt_find_handler(req_hdr->nh_group, req_hdr->nh_id);
     if (handler == NULL) {
-        return MGMT_ERR_ENOENT;
+        return MGMT_ERR_ENOTSUP;
     }
 
     /* Begin response payload.  Response fields are inserted into the root
@@ -176,7 +176,7 @@ smp_handle_single_payload(struct mgmt_cbuf *cbuf,
         if (handler->mh_read != NULL) {
             rc = handler->mh_read(cbuf);
         } else {
-            rc = MGMT_ERR_ENOENT;
+            rc = MGMT_ERR_ENOTSUP;
         }
         break;
 
@@ -184,7 +184,7 @@ smp_handle_single_payload(struct mgmt_cbuf *cbuf,
         if (handler->mh_write != NULL) {
             rc = handler->mh_write(cbuf);
         } else {
-            rc = MGMT_ERR_ENOENT;
+            rc = MGMT_ERR_ENOTSUP;
         }
         break;
 
