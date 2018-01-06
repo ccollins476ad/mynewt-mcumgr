@@ -27,6 +27,7 @@
 
 static mgmt_handler_fn os_mgmt_echo;
 static mgmt_handler_fn os_mgmt_reset;
+static mgmt_handler_fn os_mgmt_taskstat_read;
 
 #if 0
 static int os_mgmt_console_echo(struct mgmt_cbuf *);
@@ -44,16 +45,16 @@ static const struct mgmt_handler os_mgmt_group_handlers[] = {
     [OS_MGMT_ID_CONS_ECHO_CTRL] = {
         os_mgmt_console_echo, os_mgmt_console_echo
     },
-    [OS_MGMT_ID_TASKSTATS] = {
-        os_mgmt_taskstat_read, NULL
-    },
-    [OS_MGMT_ID_MPSTATS] = {
+    [OS_MGMT_ID_MPSTAT] = {
         os_mgmt_mpstat_read, NULL
     },
     [OS_MGMT_ID_DATETIME_STR] = {
         os_mgmt_datetime_get, os_mgmt_datetime_set
     },
 #endif
+    [OS_MGMT_ID_TASKSTAT] = {
+        os_mgmt_taskstat_read, NULL
+    },
     [OS_MGMT_ID_RESET] = {
         NULL, os_mgmt_reset
     },
@@ -306,6 +307,86 @@ os_mgmt_reset_tmo(struct os_event *ev)
     hal_system_reset();
 }
 #endif
+
+static int
+os_mgmt_taskstat_encode_one(struct CborEncoder *encoder,
+                            const struct os_mgmt_task_info *task_info)
+{
+    CborEncoder task_map;
+    CborError err;
+
+    err = 0;
+    err |= cbor_encode_text_stringz(encoder, task_info->oti_name);
+    err |= cbor_encoder_create_map(encoder, &task_map, CborIndefiniteLength);
+    err |= cbor_encode_text_stringz(&task_map, "prio");
+    err |= cbor_encode_uint(&task_map, task_info->oti_prio);
+    err |= cbor_encode_text_stringz(&task_map, "tid");
+    err |= cbor_encode_uint(&task_map, task_info->oti_taskid);
+    err |= cbor_encode_text_stringz(&task_map, "state");
+    err |= cbor_encode_uint(&task_map, task_info->oti_state);
+    err |= cbor_encode_text_stringz(&task_map, "stkuse");
+    err |= cbor_encode_uint(&task_map, task_info->oti_stkusage);
+    err |= cbor_encode_text_stringz(&task_map, "stksiz");
+    err |= cbor_encode_uint(&task_map, task_info->oti_stksize);
+    err |= cbor_encode_text_stringz(&task_map, "cswcnt");
+    err |= cbor_encode_uint(&task_map, task_info->oti_cswcnt);
+    err |= cbor_encode_text_stringz(&task_map, "runtime");
+    err |= cbor_encode_uint(&task_map, task_info->oti_runtime);
+    err |= cbor_encode_text_stringz(&task_map, "last_checkin");
+    err |= cbor_encode_uint(&task_map, task_info->oti_last_checkin);
+    err |= cbor_encode_text_stringz(&task_map, "next_checkin");
+    err |= cbor_encode_uint(&task_map, task_info->oti_next_checkin);
+    err |= cbor_encoder_close_container(encoder, &task_map);
+
+    if (err != 0) {
+        return MGMT_ERR_ENOMEM;
+    }
+
+    return 0;
+}
+
+static int
+os_mgmt_taskstat_read(struct mgmt_cbuf *cb)
+{
+    struct os_mgmt_task_info task_info;
+    struct CborEncoder tasks_map;
+    CborError err;
+    int task_idx;
+    int rc;
+
+    err = 0;
+
+    err |= cbor_encode_text_stringz(&cb->encoder, "tasks");
+    err |= cbor_encoder_create_map(&cb->encoder, &tasks_map,
+                                   CborIndefiniteLength);
+    if (err != 0) {
+        return MGMT_ERR_ENOMEM;
+    }
+
+    task_idx = 0;
+    while (1) {
+        rc = os_mgmt_impl_task_info(task_idx, &task_info);
+        if (rc == MGMT_ERR_ENOENT) {
+            break;
+        } else if (rc != 0) {
+            return rc;
+        }
+
+        rc = os_mgmt_taskstat_encode_one(&tasks_map, &task_info);
+        if (rc != 0) {
+            return rc;
+        }
+
+        task_idx++;
+    }
+
+    err = cbor_encoder_close_container(&cb->encoder, &tasks_map);
+    if (err != 0) {
+        return MGMT_ERR_ENOMEM;
+    }
+
+    return 0;
+}
 
 static int
 os_mgmt_reset(struct mgmt_cbuf *cb)
