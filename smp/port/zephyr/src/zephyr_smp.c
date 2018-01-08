@@ -1,7 +1,7 @@
 #include <zephyr.h>
 #include "mgmt/mgmt.h"
 #include "smp/smp.h"
-#include "znp/znp.h"
+#include "mgmt/znp.h"
 #include "zephyr_smp/zephyr_smp.h"
 
 static mgmt_alloc_rsp_fn zephyr_smp_alloc_rsp;
