@@ -2,18 +2,14 @@
 #define H_ZEPHYR_SMP_
 
 struct zephyr_smp_transport;
-
-/* XXX: Note: `zephyr_nmgr_pkt` is only used here during development.  Most
- * likely, a net_buf will be used instead.
- */
-struct zephyr_nmgr_pkt;
+struct net_buf;
 
 /**
  * Transmit function.  The supplied mbuf is always consumed, regardless of
  * return code.
  */
 typedef int zephyr_smp_transport_out_fn(struct zephyr_smp_transport *zst,
-                                        struct zephyr_nmgr_pkt *pkt);
+                                        struct net_buf *nb);
 
 /**
  * MTU query function.  The supplied packet should contain a request received
@@ -25,7 +21,7 @@ typedef int zephyr_smp_transport_out_fn(struct zephyr_smp_transport *zst,
  *                              0 if transmission is currently not possible.
  */
 typedef uint16_t
-zephyr_smp_transport_get_mtu_fn(const struct zephyr_nmgr_pkt *pkt);
+zephyr_smp_transport_get_mtu_fn(const struct net_buf *nb);
 
 struct zephyr_smp_transport {
     /* Must be the first member. */
@@ -43,6 +39,6 @@ void zephyr_smp_transport_init(struct zephyr_smp_transport *zst,
                                zephyr_smp_transport_get_mtu_fn *get_mtu_func);
 
 int zephyr_smp_rx_req(struct zephyr_smp_transport *zst,
-                      struct zephyr_nmgr_pkt *pkt);
+                      struct net_buf *nb);
 
 #endif

@@ -1,7 +1,8 @@
 #include <zephyr.h>
+#include "net/buf.h"
 #include "mgmt/mgmt.h"
+#include "mgmt/buf.h"
 #include "smp/smp.h"
-#include "mgmt/znp.h"
 #include "zephyr_smp/zephyr_smp.h"
 
 static mgmt_alloc_rsp_fn zephyr_smp_alloc_rsp;
@@ -26,94 +27,90 @@ static const struct mgmt_streamer_cfg zephyr_smp_cbor_cfg = {
 static void *
 zephyr_smp_alloc_rsp(const void *req, void *arg)
 {
-    const struct zephyr_nmgr_pkt *req_pkt;
-    struct zephyr_nmgr_pkt *rsp_pkt;
+    const struct net_buf_pool *pool;
+    const struct net_buf *req_nb;
+    struct net_buf *rsp_nb;
 
-    req_pkt = req;
+    req_nb = req;
 
-    rsp_pkt = k_malloc(sizeof *rsp_pkt);
-    if (rsp_pkt == NULL) {
+    rsp_nb = mcumgr_buf_alloc();
+    if (rsp_nb == NULL) {
         assert(0);
         return NULL;
     }
-    rsp_pkt->len = 0;
-    memcpy(rsp_pkt->extra, req_pkt->extra, sizeof rsp_pkt->extra);
 
-    return rsp_pkt;
-}
+    pool = net_buf_pool_get(req_nb->pool_id);
+    memcpy(net_buf_user_data(rsp_nb),
+           net_buf_user_data((void *)req_nb),
+           pool->user_data_size);
 
-static struct zephyr_nmgr_pkt *
-zephyr_smp_split_frag(struct zephyr_nmgr_pkt **pkt, uint16_t mtu)
-{
-    struct zephyr_nmgr_pkt *frag;
-    struct zephyr_nmgr_pkt *src;
-
-    src = *pkt;
-
-    if (src->len <= mtu) {
-        *pkt = NULL;
-        frag = src;
-    } else {
-        frag = zephyr_smp_alloc_rsp(src, NULL);
-        frag->len = mtu;
-        memcpy(frag->data, src->data, mtu);
-
-        src->len -= mtu;
-        memmove(src->data, src->data + mtu, src->len);
-    }
-
-    return frag;
+    return rsp_nb;
 }
 
 static int
 zephyr_smp_trim_front(void *buf, int len, void *arg)
 {
-    struct zephyr_nmgr_pkt *pkt;
+    struct net_buf *nb;
 
-    if (len > 0) {
-        pkt = buf;
-        if (len >= pkt->len) {
-            pkt->len = 0;
-        } else {
-            memmove(pkt->data, pkt->data + len, pkt->len - len);
-            pkt->len -= len;
-        }
+    nb = buf;
+    if (len > nb->len) {
+        len = nb->len;
     }
 
+    net_buf_pull(nb, len);
+
     return 0;
+}
+
+static struct net_buf *
+zephyr_smp_split_frag(struct net_buf **nb, uint16_t mtu)
+{
+    struct net_buf *frag;
+    struct net_buf *src;
+
+    src = *nb;
+
+    if (src->len <= mtu) {
+        *nb = NULL;
+        frag = src;
+    } else {
+        frag = zephyr_smp_alloc_rsp(src, NULL);
+        net_buf_add_mem(frag, src->data, mtu);
+
+        zephyr_smp_trim_front(src, mtu, NULL);
+    }
+
+    return frag;
 }
 
 static void
 zephyr_smp_reset_buf(void *buf, void *arg)
 {
-    struct zephyr_nmgr_pkt *pkt;
-
-    pkt = buf;
-    pkt->len = 0;
+    net_buf_reset(buf);
 }
 
 static int
 zephyr_smp_write_at(struct cbor_encoder_writer *writer, int offset,
                      const void *data, int len, void *arg)
 {
-    struct cbor_znp_writer *czw;
-    struct zephyr_nmgr_pkt *pkt;
+    struct cbor_nb_writer *czw;
+    struct net_buf *nb;
 
-    czw = (struct cbor_znp_writer *)writer;
-    pkt = czw->pkt;
+    czw = (struct cbor_nb_writer *)writer;
+    nb = czw->nb;
 
-    if (offset < 0 || offset > pkt->len) {
+    if (offset < 0 || offset > nb->len) {
         return MGMT_ERR_EINVAL;
     }
 
-    if (offset + len > sizeof pkt->data) {
+    if (len > net_buf_tailroom(nb)) {
         return MGMT_ERR_EINVAL;
     }
 
-    memcpy(pkt->data + offset, data, len);
-    if (pkt->len < offset + len) {
-        pkt->len = offset + len;
-        writer->bytes_written = pkt->len;
+    memcpy(nb->data + offset, data, len);
+    if (nb->len < offset + len) {
+        nb->len = offset + len;
+        writer->bytes_written = nb->len;
     }
 
     return 0;
@@ -123,14 +120,14 @@ static int
 zephyr_smp_tx_rsp(struct smp_streamer *ns, void *rsp, void *arg)
 {
     struct zephyr_smp_transport *zst;
-    struct zephyr_nmgr_pkt *frag;
-    struct zephyr_nmgr_pkt *pkt;
+    struct net_buf *frag;
+    struct net_buf *nb;
     uint16_t mtu;
     int rc;
     int i;
 
     zst = arg;
-    pkt = rsp;
+    nb = rsp;
 
     mtu = zst->zst_get_mtu(rsp);
     if (mtu == 0) {
@@ -139,8 +136,8 @@ zephyr_smp_tx_rsp(struct smp_streamer *ns, void *rsp, void *arg)
     }
 
     i = 0;
-    while (pkt != NULL) {
-        frag = zephyr_smp_split_frag(&pkt, mtu);
+    while (nb != NULL) {
+        frag = zephyr_smp_split_frag(&nb, mtu);
         if (frag == NULL) {
             return MGMT_ERR_ENOMEM;
         }
@@ -157,17 +154,17 @@ zephyr_smp_tx_rsp(struct smp_streamer *ns, void *rsp, void *arg)
 static void
 zephyr_smp_free_buf(void *buf, void *arg)
 {
-    k_free(buf);
+    mcumgr_buf_free(buf);
 }
 
 static int
 zephyr_smp_init_reader(struct cbor_decoder_reader *reader, void *buf,
                         void *arg)
 {
-    struct cbor_znp_reader *czr;
+    struct cbor_nb_reader *czr;
 
-    czr = (struct cbor_znp_reader *)reader;
-    cbor_znp_reader_init(czr, buf, 0);
+    czr = (struct cbor_nb_reader *)reader;
+    cbor_nb_reader_init(czr, buf, 0);
 
     return 0;
 }
@@ -176,20 +173,20 @@ static int
 zephyr_smp_init_writer(struct cbor_encoder_writer *writer, void *buf,
                         void *arg)
 {
-    struct cbor_znp_writer *czw;
+    struct cbor_nb_writer *czw;
 
-    czw = (struct cbor_znp_writer *)writer;
-    cbor_znp_writer_init(czw, buf);
+    czw = (struct cbor_nb_writer *)writer;
+    cbor_nb_writer_init(czw, buf);
 
     return 0;
 }
 
 static int
 zephyr_smp_process_packet(struct zephyr_smp_transport *zst,
-                          struct zephyr_nmgr_pkt *pkt)
+                          struct net_buf *nb)
 {
-    struct cbor_znp_reader reader;
-    struct cbor_znp_writer writer;
+    struct cbor_nb_reader reader;
+    struct cbor_nb_writer writer;
     struct smp_streamer streamer;
     int rc;
 
@@ -203,7 +200,7 @@ zephyr_smp_process_packet(struct zephyr_smp_transport *zst,
         .ss_tx_rsp = zephyr_smp_tx_rsp,
     };
 
-    rc = smp_process_single_packet(&streamer, pkt);
+    rc = smp_process_single_packet(&streamer, nb);
     return rc;
 }
 
@@ -211,12 +208,12 @@ static void
 zephyr_smp_handle_reqs(struct k_work *work)
 {
     struct zephyr_smp_transport *zst;
-    struct zephyr_nmgr_pkt *pkt;
+    struct net_buf *nb;
 
     zst = (void *)work;
 
-    while ((pkt = k_fifo_get(&zst->zst_fifo, K_NO_WAIT)) != NULL) {
-        zephyr_smp_process_packet(zst, pkt);
+    while ((nb = k_fifo_get(&zst->zst_fifo, K_NO_WAIT)) != NULL) {
+        zephyr_smp_process_packet(zst, nb);
     }
 }
 
@@ -234,14 +231,11 @@ zephyr_smp_transport_init(struct zephyr_smp_transport *zst,
     k_fifo_init(&zst->zst_fifo);
 }
 
-/* XXX: Note: `zephyr_nmgr_pkt` is only used here during development.  Most
- * likely, a net_buf will be used instead.
- */
 int
 zephyr_smp_rx_req(struct zephyr_smp_transport *zst,
-                  struct zephyr_nmgr_pkt *pkt)
+                  struct net_buf *nb)
 {
-    k_fifo_put(&zst->zst_fifo, pkt);
+    k_fifo_put(&zst->zst_fifo, nb);
     k_work_submit(&zst->zst_work);
 
     return 0;
