@@ -12,6 +12,8 @@ zephyr_include_directories(MCUMGR INTERFACE
 zephyr_library()
 zephyr_library_sources(
     cborattr/src/cborattr.c
+    cmd/fs_mgmt/src/fs_mgmt.c
+    cmd/fs_mgmt/src/stubs.c
     cmd/img_mgmt/port/zephyr/src/zephyr_img_mgmt.c
     cmd/img_mgmt/src/img_mgmt.c
     cmd/img_mgmt/src/img_mgmt_state.c
