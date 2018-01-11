@@ -29,4 +29,4 @@ zephyr_library_sources(
     smp/src/smp.c
 )
 zephyr_library_link_libraries(MCUMGR)
-target_link_libraries(MCUMGR INTERFACE zephyr_interface NFFS)
+target_link_libraries(MCUMGR INTERFACE zephyr_interface)
