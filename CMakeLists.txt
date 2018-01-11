@@ -1,6 +1,6 @@
 add_library(MCUMGR INTERFACE)
 
-zephyr_include_directories(MCUMGR INTERFACE 
+target_include_directories(MCUMGR INTERFACE 
     cborattr/include
     cmd/fs_mgmt/include
     cmd/img_mgmt/include
