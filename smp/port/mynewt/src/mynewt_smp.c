@@ -56,17 +56,21 @@ mynewt_smp_rsp_frag_alloc(uint16_t frag_size, void *arg)
 }
 
 static void *
-mynewt_smp_alloc_rsp(const void *user_data, int user_data_len, void *arg)
+mynewt_smp_alloc_rsp(const void *req, void *arg)
 {
+    const struct os_mbuf *om_req;
     struct os_mbuf *om_rsp;
 
-    om_rsp = os_msys_get_pkthdr(512, OS_MBUF_USRHDR_LEN(user_data_len));
+    om_req = req;
+    om_rsp = os_msys_get_pkthdr(512, OS_MBUF_USRHDR_LEN(om_req));
     if (om_rsp == NULL) {
         return NULL;
     }
 
     /* Copy the request user header into the response. */
-    memcpy(OS_MBUF_USRHDR(om_rsp), user_data, user_data_len);
+    memcpy(OS_MBUF_USRHDR(om_rsp),
+           OS_MBUF_USRHDR(om_req),
+           OS_MBUF_USRHDR_LEN(om_req));
 
     return om_rsp;
 }

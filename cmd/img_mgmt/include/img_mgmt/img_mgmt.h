@@ -40,7 +40,7 @@ extern "C" {
 /**
  * @brief Registers the image management command handler group.
  */ 
-int img_mgmt_register_group(void);
+void img_mgmt_register_group(void);
 
 #ifdef __cplusplus
 }

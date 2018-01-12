@@ -26,11 +26,9 @@ static struct mgmt_group *mgmt_group_list;
 static struct mgmt_group *mgmt_group_list_end;
 
 void *
-mgmt_streamer_alloc_rsp(struct mgmt_streamer *streamer,
-                        const void *user_data, size_t user_data_len);
+mgmt_streamer_alloc_rsp(struct mgmt_streamer *streamer, const void *req)
 {
-    return streamer->cfg->alloc_rsp(user_data, user_data_len,
-                                    streamer->cb_arg);
+    return streamer->cfg->alloc_rsp(req, streamer->cb_arg);
 }
 
 void

@@ -83,15 +83,16 @@ struct mgmt_hdr {
 /** @typedef mgmt_alloc_rsp_fn
  * @brief Allocates a buffer suitable for holding a response.
  *
- * @param user_data             The user data, if any, to copy into the buffer.
- * @param user_data_len         The number of user data bytes to copy.
+ * If a source buf is provided, its user data is copied into the new buffer.
+ *
+ * @param src_buf               An optional source buffer to copy user data
+ *                                  from.
  * @param arg                   Optional streamer argument.
  *
  * @return                      Newly-allocated buffer on success
  *                              NULL on failure.
  */
-typedef void *mgmt_alloc_rsp_fn(const void *user_data, size_t user_data_len,
-                                void *arg);
+typedef void *mgmt_alloc_rsp_fn(const void *src_buf, void *arg);
 
 /** @typedef mgmt_trim_front_fn
  * @brief Trims data from the front of a buffer.
@@ -235,15 +236,17 @@ struct mgmt_group {
 /**
  * @brief Uses the specified streamer to allocates a response buffer.
  *
+ * If a source buf is provided, its user data is copied into the new buffer.
+ *
  * @param streamer              The streamer providing the callback.
- * @param user_data             The user data, if any, to copy into the buffer.
- * @param user_data_len         The number of user data bytes to copy.
+ * @param src_buf               An optional source buffer to copy user data
+ *                                  from.
  *
  * @return                      Newly-allocated buffer on success
  *                              NULL on failure.
  */
 void *mgmt_streamer_alloc_rsp(struct mgmt_streamer *streamer,
-                              const void *user_data, size_t user_data_len);
+                              const void *src_buf);
 
 /**
  * @brief Uses the specified streamer to trim data from the front of a buffer.

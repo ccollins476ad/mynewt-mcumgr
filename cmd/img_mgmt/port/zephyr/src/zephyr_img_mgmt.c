@@ -8,6 +8,7 @@
 #include "mgmt/mgmt.h"
 #include "img_mgmt/img_mgmt_impl.h"
 #include "img_mgmt/img_mgmt.h"
+#include "../../../src/img_mgmt_priv.h"
 
 static struct device *zephyr_img_flash_dev;
 static struct flash_img_context zephyr_img_flash_ctxt;

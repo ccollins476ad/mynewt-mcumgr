@@ -200,11 +200,8 @@ fs_mgmt_file_upload(struct mgmt_cbuf *cb)
     return fs_mgmt_file_upload_rsp(cb, 0, fs_mgmt_ctxt.off);
 }
 
-int
+void
 fs_mgmt_register_group(void)
 {
-    int rc;
-
-    rc = mgmt_register_group(&fs_mgmt_group);
-    return rc;
+    mgmt_register_group(&fs_mgmt_group);
 }

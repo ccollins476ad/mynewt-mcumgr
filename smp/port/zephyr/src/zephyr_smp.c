@@ -24,26 +24,24 @@ static const struct mgmt_streamer_cfg zephyr_smp_cbor_cfg = {
     .free_buf = zephyr_smp_free_buf,
 };
 
-static void *
-zephyr_smp_alloc_rsp(const void *user_data, int user_data_len, void *arg)
+void *
+zephyr_smp_alloc_rsp(const void *req, void *arg)
 {
     const struct net_buf_pool *pool;
+    const struct net_buf *req_nb;
     struct net_buf *rsp_nb;
+
+    req_nb = req;
 
     rsp_nb = mcumgr_buf_alloc();
     if (rsp_nb == NULL) {
         return NULL;
     }
 
-    pool = net_buf_pool_get(rsp_nb->pool_id);
-    if (user_data_len > pool->user_data_size) {
-        zephyr_smp_free_buf(rsp_nb);
-        return NULL;
-    }
-
-    if (user_data_len > 0) {
-        memcpy(net_buf_user_data(rsp_nb), user_data, user_data_len);
-    }
+    pool = net_buf_pool_get(req_nb->pool_id);
+    memcpy(net_buf_user_data(rsp_nb),
+           net_buf_user_data((void *)req_nb),
+           pool->user_data_size);
 
     return rsp_nb;
 }
@@ -74,8 +72,11 @@ zephyr_smp_split_frag(struct net_buf **nb, uint16_t mtu)
         frag = src;
     } else {
         frag = zephyr_smp_alloc_rsp(src, NULL);
+
+        /* Copy fragment payload into new buffer. */
         net_buf_add_mem(frag, src->data, mtu);
 
+        /* Remove fragment from total response. */
         zephyr_smp_trim_front(src, mtu, NULL);
     }
 
@@ -89,8 +90,8 @@ zephyr_smp_reset_buf(void *buf, void *arg)
 }
 
 static int
-zephyr_smp_write_at(struct cbor_encoder_writer *writer, int offset,
-                     const void *data, int len, void *arg)
+zephyr_smp_write_at(struct cbor_encoder_writer *writer, size_t offset,
+                     const void *data, size_t len, void *arg)
 {
     struct cbor_nb_writer *czw;
     struct net_buf *nb;

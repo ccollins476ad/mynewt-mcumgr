@@ -334,8 +334,7 @@ smp_process_request_packet(struct smp_streamer *streamer, void *req)
             break;
         }
         mgmt_ntoh_hdr(&req_hdr);
-        rc = mgmt_streamer_trim_front(&streamer->mgmt_stmr, req, MGMT_HDR_SIZE);
-        assert(rc == 0);
+        mgmt_streamer_trim_front(&streamer->mgmt_stmr, req, MGMT_HDR_SIZE);
 
         rsp = mgmt_streamer_alloc_rsp(&streamer->mgmt_stmr, req);
         if (rsp == NULL) {
@@ -362,9 +361,8 @@ smp_process_request_packet(struct smp_streamer *streamer, void *req)
         }
 
         /* Trim processed request to free up space for subsequent responses. */
-        rc = mgmt_streamer_trim_front(&streamer->mgmt_stmr, req,
-                                      smp_align4(req_hdr.nh_len));
-        assert(rc == 0);
+        mgmt_streamer_trim_front(&streamer->mgmt_stmr, req,
+                                 smp_align4(req_hdr.nh_len));
     }
 
     if (rc != 0 && valid_hdr) {

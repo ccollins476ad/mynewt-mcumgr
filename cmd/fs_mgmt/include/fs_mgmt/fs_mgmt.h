@@ -32,7 +32,7 @@ extern "C" {
 /**
  * @brief Registers the file system management command handler group.
  */ 
-int fs_mgmt_register_group(void);
+void fs_mgmt_register_group(void);
 
 #ifdef __cplusplus
 }
