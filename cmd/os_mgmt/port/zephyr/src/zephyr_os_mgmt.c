@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 #include <zephyr.h>
 #include <misc/reboot.h>
 #include <debug/object_tracing.h>
@@ -5,6 +24,9 @@
 #include "mgmt/mgmt.h"
 #include "os_mgmt/os_mgmt.h"
 #include "os_mgmt/os_mgmt_impl.h"
+
+/* XXX: Make this configurable. */
+#define ZEPHYR_OS_MGMT_RESET_MS 250
 
 static void zephyr_os_mgmt_reset_cb(struct k_timer *timer);
 
@@ -61,7 +83,8 @@ zephyr_os_mgmt_reset_cb(struct k_timer *timer)
 int
 os_mgmt_impl_reset(void)
 {
-    k_timer_start(&zephyr_os_mgmt_reset_timer, K_MSEC(250), 0);
+    k_timer_start(&zephyr_os_mgmt_reset_timer, K_MSEC(ZEPHYR_OS_MGMT_RESET_MS),
+                  0);
 
     return 0;
 }

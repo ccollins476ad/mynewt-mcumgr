@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 #include "mgmt/mgmt.h"
 #include "fs_mgmt/fs_mgmt_impl.h"
 #include "fs.h"
@@ -10,6 +29,10 @@ fs_mgmt_impl_filelen(const char *path, size_t *out_len)
 
     rc = fs_stat(path, &dirent);
     if (rc != 0) {
+        return MGMT_ERR_EUNKNOWN;
+    }
+
+    if (dirent.type != FS_DIR_ENTRY_FILE) {
         return MGMT_ERR_EUNKNOWN;
     }
 
@@ -48,6 +71,35 @@ done:
 
     if (rc != 0) {
         return MGMT_ERR_EUNKNOWN;
+    } else {
+        return 0;
+    }
+}
+
+static int
+zephyr_fs_mgmt_truncate(const char *path)
+{
+    size_t len;
+    int rc;
+
+    /* Attempt to get the length of the file at the specified path.  This is a
+     * quick way to determine if there is already a file there.
+     */
+    rc = fs_mgmt_impl_filelen(path, &len);
+    if (rc == 0) {
+        /* There is already a file with the specified path.  Unlink it to
+         * simulate a truncate operation.
+         *
+         * XXX: This isn't perfect - if the file is currently open, the unlink
+         * operation won't actually delete the file.  Consequently, the file
+         * will get partially overwritten rather than truncated.  The NFFS port
+         * doesn't support the truncate operation, so this is an imperfect
+         * workaround.
+         */
+        rc = fs_unlink(path);
+        if (rc != 0) {
+            return MGMT_ERR_EUNKNOWN;
+        }
     }
 
     return 0;
@@ -60,8 +112,15 @@ fs_mgmt_impl_write(const char *path, size_t offset, const void *data,
     fs_file_t file;
     int rc;
  
+    /* Truncate the file before writing the first chunk.  This is done to
+     * properly handle an overwrite of an existing file.
+     *
+     */
     if (offset == 0) {
-        fs_unlink(path);
+        rc = zephyr_fs_mgmt_truncate(path);
+        if (rc != 0) {
+            return rc;
+        }
     }
 
     rc = fs_open(&file, path);
@@ -86,7 +145,7 @@ done:
 
     if (rc != 0) {
         return MGMT_ERR_EUNKNOWN;
+    } else {
+        return 0;
     }
-
-    return 0;
 }

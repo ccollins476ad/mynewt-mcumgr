@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 #include <zephyr.h>
 #include "net/buf.h"
 #include "mgmt/mgmt.h"
@@ -59,6 +78,39 @@ zephyr_smp_trim_front(void *buf, size_t len, void *arg)
     net_buf_pull(nb, len);
 }
 
+/**
+ * Splits an appropriately-sized fragment from the front of a net_buf, as
+ * neeeded.  If the length of the net_buf is greater than specified maximum
+ * fragment size, a new net_buf is allocated, and data is moved from the source
+ * net_buf to the new net_buf.  If the net_buf is small enough to fit in a
+ * single fragment, the source net_buf is returned unmodified, and the supplied
+ * pointer is set to NULL.
+ *
+ * This function is expected to be called in a loop until the entire source
+ * net_buf has been consumed.  For example:
+ *
+ *     struct net_buf *frag;
+ *     struct net_buf *rsp;
+ *     // [...]
+ *     while (rsp != NULL) {
+ *         frag = zephyr_smp_split_frag(&rsp, get_mtu());
+ *         if (frag == NULL) {
+ *             net_buf_unref(nb);
+ *             return SYS_ENOMEM;
+ *         }
+ *         send_packet(frag)
+ *     }
+ *
+ * @param nb                    The packet to fragment.  Upon fragmentation,
+ *                                  this net_buf is adjusted such that the
+ *                                  fragment data is removed.  If the packet
+ *                                  constitutes a single fragment, this gets
+ *                                  set to NULL on success.
+ * @param mtu                   The maximum payload size of a fragment.
+ *
+ * @return                      The next fragment to send on success;
+ *                              NULL on failure.
+ */
 static struct net_buf *
 zephyr_smp_split_frag(struct net_buf **nb, uint16_t mtu)
 {
@@ -91,7 +143,7 @@ zephyr_smp_reset_buf(void *buf, void *arg)
 
 static int
 zephyr_smp_write_at(struct cbor_encoder_writer *writer, size_t offset,
-                     const void *data, size_t len, void *arg)
+                    const void *data, size_t len, void *arg)
 {
     struct cbor_nb_writer *czw;
     struct net_buf *nb;
@@ -181,6 +233,9 @@ zephyr_smp_init_writer(struct cbor_encoder_writer *writer, void *buf,
     return 0;
 }
 
+/**
+ * Processes a single SMP packet and sends the corresponding response(s).
+ */
 static int
 zephyr_smp_process_packet(struct zephyr_smp_transport *zst,
                           struct net_buf *nb)
@@ -204,6 +259,9 @@ zephyr_smp_process_packet(struct zephyr_smp_transport *zst,
     return rc;
 }
 
+/**
+ * Processes all received SNP request packets.
+ */
 static void
 zephyr_smp_handle_reqs(struct k_work *work)
 {
@@ -231,12 +289,9 @@ zephyr_smp_transport_init(struct zephyr_smp_transport *zst,
     k_fifo_init(&zst->zst_fifo);
 }
 
-int
-zephyr_smp_rx_req(struct zephyr_smp_transport *zst,
-                  struct net_buf *nb)
+void
+zephyr_smp_rx_req(struct zephyr_smp_transport *zst, struct net_buf *nb)
 {
     k_fifo_put(&zst->zst_fifo, nb);
     k_work_submit(&zst->zst_work);
-
-    return 0;
 }

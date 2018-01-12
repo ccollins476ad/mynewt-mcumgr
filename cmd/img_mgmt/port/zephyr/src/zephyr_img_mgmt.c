@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 #include <assert.h>
 #include <flash.h>
 #include <zephyr.h>
@@ -13,6 +32,9 @@
 static struct device *zephyr_img_flash_dev;
 static struct flash_img_context zephyr_img_flash_ctxt;
 
+/**
+ * Determines if the specified area of flash is completely unwritten.
+ */
 static int
 img_mgmt_impl_flash_check_empty(off_t offset, size_t size, bool *out_empty)
 {
@@ -50,6 +72,9 @@ img_mgmt_impl_flash_check_empty(off_t offset, size_t size, bool *out_empty)
     return 0;
 }
 
+/**
+ * Converts an offset within an image slot to an absolute address.
+ */
 static off_t
 img_mgmt_impl_abs_offset(int slot, off_t sub_offset)
 {
@@ -193,7 +218,7 @@ img_mgmt_impl_init(struct device *dev)
     ARG_UNUSED(dev);
 
     zephyr_img_flash_dev = device_get_binding(FLASH_DRIVER_NAME);
-    if (!zephyr_img_flash_dev) {
+    if (zephyr_img_flash_dev == NULL) {
         return -ENODEV;
     }
     return 0;

@@ -18,11 +18,8 @@
  */
 
 #include <assert.h>
-
-#include <zephyr.h>
-#include "dfu/mcuboot.h"
-#include "cborattr/cborattr.h"
 #include "cbor.h"
+#include "cborattr/cborattr.h"
 #include "mgmt/mgmt.h"
 #include "img_mgmt/img_mgmt.h"
 #include "img_mgmt/image.h"
@@ -36,6 +33,9 @@
 
 #define IMG_MGMT_VER_MAX_STR_LEN    25  /* 255.255.65535.4294967295\0 */
 
+/**
+ * Collects information about the specified image slot.
+ */
 static uint8_t
 img_mgmt_state_flags(int query_slot)
 {
@@ -92,6 +92,10 @@ img_mgmt_state_flags(int query_slot)
     return flags;
 }
 
+/**
+ * Indicates whether any image slot is pending (i.e., whether a test swap will
+ * happen on the next reboot.
+ */
 static int
 img_mgmt_state_any_pending(void)
 {
@@ -99,6 +103,10 @@ img_mgmt_state_any_pending(void)
            img_mgmt_state_flags(1) & IMG_MGMT_STATE_F_PENDING;
 }
 
+/**
+ * Indicates whether the specified slot has any flags.  If no flags are set,
+ * the slot can be freely erased.
+ */
 int
 img_mgmt_slot_in_use(int slot)
 {
@@ -110,6 +118,12 @@ img_mgmt_slot_in_use(int slot)
            state_flags & IMG_MGMT_STATE_F_PENDING;
 }
 
+/**
+ * Sets the pending flag for the specified image slot.  That is, the system
+ * will swap to the specified image on the next reboot.  If the permanent
+ * argument is specified, the system doesn't require a confirm after the swap
+ * occurs.
+ */
 int
 img_mgmt_state_set_pending(int slot, int permanent)
 {
@@ -133,6 +147,10 @@ img_mgmt_state_set_pending(int slot, int permanent)
     return 0;
 }
 
+/**
+ * Confirms the current image state.  Prevents a fallback from occurring on the
+ * next reboot if the active image is currently being tested.
+ */
 int
 img_mgmt_state_confirm(void)
 {
@@ -151,26 +169,27 @@ img_mgmt_state_confirm(void)
     return 0;
 }
 
+/**
+ * Command handler: image state read
+ */
 int
-img_mgmt_state_read(struct mgmt_cbuf *cb)
+img_mgmt_state_read(struct mgmt_ctxt *ctxt)
 {
-    int i;
-    int rc;
-    uint32_t flags;
-    struct image_version ver;
-    uint8_t hash[IMAGE_HASH_LEN]; /* SHA256 hash */
     char vers_str[IMG_MGMT_VER_MAX_STR_LEN];
-    int any_non_bootable;
-    uint8_t state_flags;
-    CborError g_err = CborNoError;
+    uint8_t hash[IMAGE_HASH_LEN]; /* SHA256 hash */
+    struct image_version ver;
     CborEncoder images;
     CborEncoder image;
+    CborError err;
+    uint32_t flags;
+    uint8_t state_flags;
+    int rc;
+    int i;
 
-    any_non_bootable = 0;
+    err = 0;
+    err |= cbor_encode_text_stringz(&ctxt->encoder, "images");
 
-    g_err |= cbor_encode_text_stringz(&cb->encoder, "images");
-
-    g_err |= cbor_encoder_create_array(&cb->encoder, &images,
+    err |= cbor_encoder_create_array(&ctxt->encoder, &images,
                                        CborIndefiniteLength);
     for (i = 0; i < 2; i++) {
         rc = img_mgmt_read_info(i, &ver, hash, &flags);
@@ -178,62 +197,62 @@ img_mgmt_state_read(struct mgmt_cbuf *cb)
             continue;
         }
 
-        if (flags & IMAGE_F_NON_BOOTABLE) {
-            any_non_bootable = 1;
-        }
-
         state_flags = img_mgmt_state_flags(i);
 
-        g_err |= cbor_encoder_create_map(&images, &image,
+        err |= cbor_encoder_create_map(&images, &image,
                                          CborIndefiniteLength);
-        g_err |= cbor_encode_text_stringz(&image, "slot");
-        g_err |= cbor_encode_int(&image, i);
+        err |= cbor_encode_text_stringz(&image, "slot");
+        err |= cbor_encode_int(&image, i);
 
-        g_err |= cbor_encode_text_stringz(&image, "version");
+        err |= cbor_encode_text_stringz(&image, "version");
         img_mgmt_ver_str(&ver, vers_str);
-        g_err |= cbor_encode_text_stringz(&image, vers_str);
+        err |= cbor_encode_text_stringz(&image, vers_str);
 
-        g_err |= cbor_encode_text_stringz(&image, "hash");
-        g_err |= cbor_encode_byte_string(&image, hash, IMAGE_HASH_LEN);
+        err |= cbor_encode_text_stringz(&image, "hash");
+        err |= cbor_encode_byte_string(&image, hash, IMAGE_HASH_LEN);
 
-        g_err |= cbor_encode_text_stringz(&image, "bootable");
-        g_err |= cbor_encode_boolean(&image, !(flags & IMAGE_F_NON_BOOTABLE));
+        err |= cbor_encode_text_stringz(&image, "bootable");
+        err |= cbor_encode_boolean(&image, !(flags & IMAGE_F_NON_BOOTABLE));
 
-        g_err |= cbor_encode_text_stringz(&image, "pending");
-        g_err |= cbor_encode_boolean(&image,
+        err |= cbor_encode_text_stringz(&image, "pending");
+        err |= cbor_encode_boolean(&image,
                                      state_flags & IMG_MGMT_STATE_F_PENDING);
 
-        g_err |= cbor_encode_text_stringz(&image, "confirmed");
-        g_err |= cbor_encode_boolean(&image,
+        err |= cbor_encode_text_stringz(&image, "confirmed");
+        err |= cbor_encode_boolean(&image,
                                      state_flags & IMG_MGMT_STATE_F_CONFIRMED);
 
-        g_err |= cbor_encode_text_stringz(&image, "active");
-        g_err |= cbor_encode_boolean(&image,
+        err |= cbor_encode_text_stringz(&image, "active");
+        err |= cbor_encode_boolean(&image,
                                      state_flags & IMG_MGMT_STATE_F_ACTIVE);
 
-        g_err |= cbor_encode_text_stringz(&image, "permanent");
-        g_err |= cbor_encode_boolean(&image,
+        err |= cbor_encode_text_stringz(&image, "permanent");
+        err |= cbor_encode_boolean(&image,
                                      state_flags & IMG_MGMT_STATE_F_PERMANENT);
 
-        g_err |= cbor_encoder_close_container(&images, &image);
+        err |= cbor_encoder_close_container(&images, &image);
     }
 
-    g_err |= cbor_encoder_close_container(&cb->encoder, &images);
+    err |= cbor_encoder_close_container(&ctxt->encoder, &images);
 
-    g_err |= cbor_encode_text_stringz(&cb->encoder, "splitStatus");
-    g_err |= cbor_encode_int(&cb->encoder, 0);
+    err |= cbor_encode_text_stringz(&ctxt->encoder, "splitStatus");
+    err |= cbor_encode_int(&ctxt->encoder, 0);
 
-    if (g_err) {
+    if (err != 0) {
         return MGMT_ERR_ENOMEM;
     }
+
     return 0;
 }
 
+/**
+ * Command handler: image state write
+ */
 int
-img_mgmt_state_write(struct mgmt_cbuf *cb)
+img_mgmt_state_write(struct mgmt_ctxt *ctxt)
 {
     uint8_t hash[IMAGE_HASH_LEN];
-    size_t hash_len = 0;
+    size_t hash_len;
     bool confirm;
     int slot;
     int rc;
@@ -255,7 +274,8 @@ img_mgmt_state_write(struct mgmt_cbuf *cb)
         [2] = { 0 },
     };
 
-    rc = cbor_read_object(&cb->it, write_attr);
+    hash_len = 0;
+    rc = cbor_read_object(&ctxt->it, write_attr);
     if (rc != 0) {
         return MGMT_ERR_EINVAL;
     }
@@ -286,7 +306,7 @@ img_mgmt_state_write(struct mgmt_cbuf *cb)
     }
 
     /* Send the current image state in the response. */
-    rc = img_mgmt_state_read(cb);
+    rc = img_mgmt_state_read(ctxt);
     if (rc != 0) {
         return rc;
     }

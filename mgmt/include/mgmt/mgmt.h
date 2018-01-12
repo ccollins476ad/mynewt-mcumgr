@@ -192,7 +192,7 @@ struct mgmt_streamer {
  * @brief Context required by command handlers for parsing requests and writing
  *        responses.
  */
-struct mgmt_cbuf {
+struct mgmt_ctxt {
     struct CborEncoder encoder;
     struct CborParser parser;
     struct CborValue it;
@@ -208,7 +208,7 @@ struct mgmt_cbuf {
  * @return                      0 if a response was successfully encoded,
  *                                 MGMT_ERR_[...] code on failure.
  */
-typedef int mgmt_handler_fn(struct mgmt_cbuf *cbuf);
+typedef int mgmt_handler_fn(struct mgmt_ctxt *cbuf);
 
 /**
  * @brief Read handler and write handler for a single command ID.
@@ -345,7 +345,7 @@ const struct mgmt_handler *mgmt_find_handler(uint16_t group_id,
  *
  * @return                      0 on success, MGMT_ERR_[...] code on failure.
  */
-int mgmt_write_rsp_status(struct mgmt_cbuf *cbuf, int status);
+int mgmt_write_rsp_status(struct mgmt_ctxt *cbuf, int status);
 
 /**
  * @brief Initializes a management context object with the specified streamer.
@@ -356,7 +356,7 @@ int mgmt_write_rsp_status(struct mgmt_cbuf *cbuf, int status);
  *
  * @return                      0 on success, MGMT_ERR_[...] code on failure.
  */
-int mgmt_cbuf_init(struct mgmt_cbuf *cbuf, struct mgmt_streamer *streamer);
+int mgmt_ctxt_init(struct mgmt_ctxt *cbuf, struct mgmt_streamer *streamer);
 
 /**
  * @brief Converts a CBOR status code to a MGMT_ERR_[...] code.

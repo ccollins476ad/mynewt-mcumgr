@@ -112,7 +112,7 @@ mgmt_find_handler(uint16_t group_id, uint16_t command_id)
 }
 
 int
-mgmt_write_rsp_status(struct mgmt_cbuf *cbuf, int errcode)
+mgmt_write_rsp_status(struct mgmt_ctxt *cbuf, int errcode)
 {
     int rc;
 
@@ -140,7 +140,7 @@ mgmt_err_from_cbor(int cbor_status)
 }
 
 int
-mgmt_cbuf_init(struct mgmt_cbuf *cbuf, struct mgmt_streamer *streamer)
+mgmt_ctxt_init(struct mgmt_ctxt *cbuf, struct mgmt_streamer *streamer)
 {
     int rc;
 

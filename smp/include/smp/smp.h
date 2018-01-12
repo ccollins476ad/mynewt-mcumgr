@@ -27,11 +27,12 @@
  *     [Offset 0]: Mgmt header
  *     [Offset 8]: CBOR map of command-specific key-value pairs.
  *
- * SMP request packets may contain multiple requests.  In this case, the
- * sequence of requests are concatenated in a single packet with no padding in
- * between.  Requests are processed sequentially from the start of the packet
- * to the end.  Each response is sent individually in its own packet.  If a
- * request elicits an error response, processing of the packet is aborted.
+ * SMP request packets may contain multiple concatenated requests.  Each
+ * request must start at an offset that is a multiple of 4, so padding shuold
+ * be inserted between requests as necessary.  Requests are processed
+ * sequentially from the start of the packet to the end.  Each response is sent
+ * individually in its own packet.  If a request elicits an error response,
+ * processing of the packet is aborted.
  */
 
 #ifndef H_SMP_

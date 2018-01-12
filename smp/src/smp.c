@@ -40,6 +40,9 @@ smp_align4(int x)
     }
 }
 
+/**
+ * Converts a request opcode to its corresponding response opcode.
+ */
 static uint8_t
 smp_rsp_op(uint8_t req_op)
 {
@@ -94,11 +97,11 @@ smp_build_err_rsp(struct smp_streamer *streamer,
                   int status)
 {
     struct CborEncoder map;
-    struct mgmt_cbuf cbuf;
+    struct mgmt_ctxt cbuf;
     struct mgmt_hdr rsp_hdr;
     int rc;
 
-    rc = mgmt_cbuf_init(&cbuf, &streamer->mgmt_stmr);
+    rc = mgmt_ctxt_init(&cbuf, &streamer->mgmt_stmr);
     if (rc != 0) {
         return rc;
     }
@@ -149,7 +152,7 @@ smp_build_err_rsp(struct smp_streamer *streamer,
  * @return                      A MGMT_ERR_[...] error code.
  */
 static int
-smp_handle_single_payload(struct mgmt_cbuf *cbuf,
+smp_handle_single_payload(struct mgmt_ctxt *cbuf,
                           const struct mgmt_hdr *req_hdr)
 {
     const struct mgmt_handler *handler;
@@ -218,11 +221,11 @@ static int
 smp_handle_single_req(struct smp_streamer *streamer,
                       const struct mgmt_hdr *req_hdr)
 {
-    struct mgmt_cbuf cbuf;
+    struct mgmt_ctxt cbuf;
     struct mgmt_hdr rsp_hdr;
     int rc;
 
-    rc = mgmt_cbuf_init(&cbuf, &streamer->mgmt_stmr);
+    rc = mgmt_ctxt_init(&cbuf, &streamer->mgmt_stmr);
     if (rc != 0) {
         return rc;
     }

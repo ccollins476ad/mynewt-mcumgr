@@ -28,7 +28,7 @@
 int
 img_mgmt_ver_str(const struct image_version *ver, char *dst)
 {
-    if (ver->iv_build_num) {
+    if (ver->iv_build_num != 0) {
         return sprintf(dst, "%u.%u.%u.%lu",
           ver->iv_major, ver->iv_minor, ver->iv_revision,
           (unsigned long)ver->iv_build_num);

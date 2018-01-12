@@ -53,12 +53,20 @@ static struct mgmt_group fs_mgmt_group = {
     .mg_group_id = MGMT_GROUP_ID_FS,
 };
 
+/**
+ * Command handler: fs file (read)
+ */
 static int
-fs_mgmt_file_download(struct mgmt_cbuf *cb)
+fs_mgmt_file_download(struct mgmt_ctxt *ctxt)
 {
-    unsigned long long off = UINT_MAX;
-    char path[FS_MGMT_PATH_MAX_LEN + 1];
     uint8_t file_data[FS_MGMT_DOWNLOAD_CHUNK_SIZE];
+    char path[FS_MGMT_PATH_MAX_LEN + 1];
+    unsigned long long off;
+    CborError err;
+    size_t bytes_read;
+    size_t file_len;
+    int rc;
+
     const struct cbor_attr_t dload_attr[] = {
         {
             .attribute = "off",
@@ -73,16 +81,16 @@ fs_mgmt_file_download(struct mgmt_cbuf *cb)
         },
         { 0 },
     };
-    int rc;
-    size_t file_len;
-    size_t bytes_read;
-    CborError err;
 
-    rc = cbor_read_object(&cb->it, dload_attr);
-    if (rc != 0 || off == UINT_MAX) {
+    off = ULLONG_MAX;
+    rc = cbor_read_object(&ctxt->it, dload_attr);
+    if (rc != 0 || off == ULLONG_MAX) {
         return MGMT_ERR_EINVAL;
     }
 
+    /* Only the response to the first download request contains the total file
+     * length.
+     */
     if (off == 0) {
         rc = fs_mgmt_impl_filelen(path, &file_len);
         if (rc != 0) {
@@ -90,23 +98,24 @@ fs_mgmt_file_download(struct mgmt_cbuf *cb)
         }
     }
 
+    /* Read the requested chunk from the file. */
     rc = fs_mgmt_impl_read(path, off, FS_MGMT_DOWNLOAD_CHUNK_SIZE,
                            file_data, &bytes_read);
     if (rc != 0) {
         return rc;
     }
 
+    /* Encode the response. */
     err = 0;
-    err |= cbor_encode_text_stringz(&cb->encoder, "off");
-    err |= cbor_encode_uint(&cb->encoder, off);
-    err |= cbor_encode_text_stringz(&cb->encoder, "data");
-    err |= cbor_encode_byte_string(&cb->encoder, file_data, bytes_read);
-    err |= cbor_encode_text_stringz(&cb->encoder, "rc");
-    err |= cbor_encode_int(&cb->encoder, MGMT_ERR_EOK);
-
+    err |= cbor_encode_text_stringz(&ctxt->encoder, "off");
+    err |= cbor_encode_uint(&ctxt->encoder, off);
+    err |= cbor_encode_text_stringz(&ctxt->encoder, "data");
+    err |= cbor_encode_byte_string(&ctxt->encoder, file_data, bytes_read);
+    err |= cbor_encode_text_stringz(&ctxt->encoder, "rc");
+    err |= cbor_encode_int(&ctxt->encoder, MGMT_ERR_EOK);
     if (off == 0) {
-        err |= cbor_encode_text_stringz(&cb->encoder, "len");
-        err |= cbor_encode_uint(&cb->encoder, file_len);
+        err |= cbor_encode_text_stringz(&ctxt->encoder, "len");
+        err |= cbor_encode_uint(&ctxt->encoder, file_len);
     }
 
     if (err != 0) {
@@ -116,16 +125,19 @@ fs_mgmt_file_download(struct mgmt_cbuf *cb)
     return 0;
 }
 
+/**
+ * Encodes a file upload response.
+ */
 static int
-fs_mgmt_file_upload_rsp(struct mgmt_cbuf *cb, int rc, unsigned long long off)
+fs_mgmt_file_upload_rsp(struct mgmt_ctxt *ctxt, int rc, unsigned long long off)
 {
     CborError err;
 
     err = 0;
-    err |= cbor_encode_text_stringz(&cb->encoder, "rc");
-    err |= cbor_encode_int(&cb->encoder, rc);
-    err |= cbor_encode_text_stringz(&cb->encoder, "off");
-    err |= cbor_encode_uint(&cb->encoder, off);
+    err |= cbor_encode_text_stringz(&ctxt->encoder, "rc");
+    err |= cbor_encode_int(&ctxt->encoder, rc);
+    err |= cbor_encode_text_stringz(&ctxt->encoder, "off");
+    err |= cbor_encode_uint(&ctxt->encoder, off);
 
     if (err != 0) {
         return MGMT_ERR_ENOMEM;
@@ -134,14 +146,17 @@ fs_mgmt_file_upload_rsp(struct mgmt_cbuf *cb, int rc, unsigned long long off)
     return 0;
 }
 
+/**
+ * Command handler: fs file (write)
+ */
 static int
-fs_mgmt_file_upload(struct mgmt_cbuf *cb)
+fs_mgmt_file_upload(struct mgmt_ctxt *ctxt)
 {
     uint8_t file_data[FS_MGMT_UPLOAD_CHUNK_SIZE];
     char file_name[FS_MGMT_PATH_MAX_LEN + 1];
-    size_t file_len;
-    long long unsigned int off = UINT_MAX;
-    long long unsigned int size = UINT_MAX;
+    unsigned long long len;
+    unsigned long long off;
+    size_t data_len;
     int rc;
 
     const struct cbor_attr_t uload_attr[5] = {
@@ -155,13 +170,13 @@ fs_mgmt_file_upload(struct mgmt_cbuf *cb)
             .attribute = "data",
             .type = CborAttrByteStringType,
             .addr.bytestring.data = file_data,
-            .addr.bytestring.len = &file_len,
+            .addr.bytestring.len = &data_len,
             .len = sizeof(file_data)
         },
         [2] = {
             .attribute = "len",
             .type = CborAttrUnsignedIntegerType,
-            .addr.uinteger = &size,
+            .addr.uinteger = &len,
             .nodefault = true
         },
         [3] = {
@@ -173,31 +188,36 @@ fs_mgmt_file_upload(struct mgmt_cbuf *cb)
         [4] = { 0 },
     };
 
-    rc = cbor_read_object(&cb->it, uload_attr);
-    if (rc != 0 || off == UINT_MAX) {
+    len = ULLONG_MAX;
+    off = ULLONG_MAX;
+    rc = cbor_read_object(&ctxt->it, uload_attr);
+    if (rc != 0 || off == ULLONG_MAX || file_name[0] == '\0') {
         return MGMT_ERR_EINVAL;
     }
 
     if (off == 0) {
-        /* New upload. */
-        fs_mgmt_ctxt.off = 0;
-        fs_mgmt_ctxt.size = size;
-
-        if (file_name[0] == '\0') {
+        /* Total file length is a required field in the first chunk request. */
+        if (len == ULLONG_MAX) {
             return MGMT_ERR_EINVAL;
         }
+
+        fs_mgmt_ctxt.off = 0;
+        fs_mgmt_ctxt.len = len;
     } else if (off != fs_mgmt_ctxt.off) {
         /* Invalid offset.  Drop the data and send the expected offset. */
-        return fs_mgmt_file_upload_rsp(cb, MGMT_ERR_EINVAL, fs_mgmt_ctxt.off);
+        return fs_mgmt_file_upload_rsp(ctxt, MGMT_ERR_EINVAL,
+                                       fs_mgmt_ctxt.off);
     }
 
-    rc = fs_mgmt_impl_write(file_name, off, file_data, file_len);
+    /* Write the data chunk to the file. */
+    rc = fs_mgmt_impl_write(file_name, off, file_data, data_len);
     if (rc != 0) {
         return rc;
     }
-    fs_mgmt_ctxt.off += file_len;
+    fs_mgmt_ctxt.off += data_len;
 
-    return fs_mgmt_file_upload_rsp(cb, 0, fs_mgmt_ctxt.off);
+    /* Send the response. */
+    return fs_mgmt_file_upload_rsp(ctxt, 0, fs_mgmt_ctxt.off);
 }
 
 void

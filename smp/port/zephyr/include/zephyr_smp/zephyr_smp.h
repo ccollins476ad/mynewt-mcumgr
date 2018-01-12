@@ -84,16 +84,15 @@ void zephyr_smp_transport_init(struct zephyr_smp_transport *zst,
                                zephyr_smp_transport_get_mtu_fn *get_mtu_func);
 
 /**
- * @brief Processes an incoming SMP request packet.
+ * @brief Enqueues an incoming SMP request packet for processing.
+ *
+ * This function always consumes the supplied net_buf.
  *
  * @param mst                   The transport to use to send the corresponding
  *                                  response(s).
  * @param req                   The request packet to process.
- *
- * @return                      0 on success, MGMT_ERR_[...] code on failure.
  */
-int zephyr_smp_rx_req(struct zephyr_smp_transport *zst,
-                      struct net_buf *nb);
+void zephyr_smp_rx_req(struct zephyr_smp_transport *zst, struct net_buf *nb);
 
 #ifdef __cplusplus
 }
