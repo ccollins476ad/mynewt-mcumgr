@@ -68,7 +68,7 @@ smp_read_hdr(struct smp_streamer *streamer, struct mgmt_hdr *dst_hdr)
 {
     struct cbor_decoder_reader *reader;
 
-    reader = streamer->ss_base.reader;
+    reader = streamer->mgmt_stmr.reader;
 
     if (reader->message_size < sizeof *dst_hdr) {
         return MGMT_ERR_EINVAL;
@@ -83,7 +83,7 @@ smp_write_hdr(struct smp_streamer *streamer, const struct mgmt_hdr *src_hdr)
 {
     int rc;
 
-    rc = mgmt_streamer_write_at(&streamer->ss_base, 0, src_hdr,
+    rc = mgmt_streamer_write_at(&streamer->mgmt_stmr, 0, src_hdr,
                                 sizeof *src_hdr);
     return mgmt_err_from_cbor(rc);
 }
@@ -98,7 +98,7 @@ smp_build_err_rsp(struct smp_streamer *streamer,
     struct mgmt_hdr rsp_hdr;
     int rc;
 
-    rc = mgmt_cbuf_init(&cbuf, &streamer->ss_base);
+    rc = mgmt_cbuf_init(&cbuf, &streamer->mgmt_stmr);
     if (rc != 0) {
         return rc;
     }
@@ -114,7 +114,7 @@ smp_build_err_rsp(struct smp_streamer *streamer,
         return rc;
     }
 
-    rc = mgmt_cbuf_setoerr(&cbuf, status);
+    rc = mgmt_write_rsp_status(&cbuf, status);
     if (rc != 0) {
         return rc;
     }
@@ -148,7 +148,7 @@ smp_build_err_rsp(struct smp_streamer *streamer,
  *
  * @return                      A MGMT_ERR_[...] error code.
  */
-int
+static int
 smp_handle_single_payload(struct mgmt_cbuf *cbuf,
                           const struct mgmt_hdr *req_hdr)
 {
@@ -222,7 +222,7 @@ smp_handle_single_req(struct smp_streamer *streamer,
     struct mgmt_hdr rsp_hdr;
     int rc;
 
-    rc = mgmt_cbuf_init(&cbuf, &streamer->ss_base);
+    rc = mgmt_cbuf_init(&cbuf, &streamer->mgmt_stmr);
     if (rc != 0) {
         return rc;
     }
@@ -281,19 +281,19 @@ smp_on_err(struct smp_streamer *streamer, const struct mgmt_hdr *req_hdr,
     }
 
     /* Clear the partial response from the buffer, if any. */
-    mgmt_streamer_reset_buf(&streamer->ss_base, rsp);
-    mgmt_streamer_init_writer(&streamer->ss_base, rsp);
+    mgmt_streamer_reset_buf(&streamer->mgmt_stmr, rsp);
+    mgmt_streamer_init_writer(&streamer->mgmt_stmr, rsp);
 
     /* Build and transmit the error response. */
     rc = smp_build_err_rsp(streamer, req_hdr, status);
     if (rc == 0) {
-        streamer->ss_tx_rsp(streamer, rsp, streamer->ss_base.cb_arg);
+        streamer->tx_rsp_cb(streamer, rsp, streamer->mgmt_stmr.cb_arg);
         rsp = NULL;
     }
 
     /* Free any extra buffers. */
-    mgmt_streamer_free_buf(&streamer->ss_base, req);
-    mgmt_streamer_free_buf(&streamer->ss_base, rsp);
+    mgmt_streamer_free_buf(&streamer->mgmt_stmr, req);
+    mgmt_streamer_free_buf(&streamer->mgmt_stmr, rsp);
 }
 
 /**
@@ -307,10 +307,10 @@ smp_on_err(struct smp_streamer *streamer, const struct mgmt_hdr *req_hdr,
  *                                  transmitting.
  * @param req                   A buffer containing the request packet.
  *
- * @return                      A MGMT_ERR_[...] error code.
+ * @return                      0 on success, MGMT_ERR_[...] code on failure.
  */
 int
-smp_process_single_packet(struct smp_streamer *streamer, void *req)
+smp_process_request_packet(struct smp_streamer *streamer, void *req)
 {
     struct mgmt_hdr req_hdr;
     void *rsp;
@@ -321,7 +321,7 @@ smp_process_single_packet(struct smp_streamer *streamer, void *req)
     valid_hdr = true;
 
     while (1) {
-        rc = mgmt_streamer_init_reader(&streamer->ss_base, req);
+        rc = mgmt_streamer_init_reader(&streamer->mgmt_stmr, req);
         if (rc != 0) {
             valid_hdr = false;
             break;
@@ -334,16 +334,16 @@ smp_process_single_packet(struct smp_streamer *streamer, void *req)
             break;
         }
         mgmt_ntoh_hdr(&req_hdr);
-        rc = mgmt_streamer_trim_front(&streamer->ss_base, req, MGMT_HDR_SIZE);
+        rc = mgmt_streamer_trim_front(&streamer->mgmt_stmr, req, MGMT_HDR_SIZE);
         assert(rc == 0);
 
-        rsp = mgmt_streamer_alloc_rsp(&streamer->ss_base, req);
+        rsp = mgmt_streamer_alloc_rsp(&streamer->mgmt_stmr, req);
         if (rsp == NULL) {
             rc = MGMT_ERR_ENOMEM;
             break;
         }
 
-        rc = mgmt_streamer_init_writer(&streamer->ss_base, rsp);
+        rc = mgmt_streamer_init_writer(&streamer->mgmt_stmr, rsp);
         if (rc != 0) {
             break;
         }
@@ -355,14 +355,14 @@ smp_process_single_packet(struct smp_streamer *streamer, void *req)
         }
 
         /* Send the response. */
-        rc = streamer->ss_tx_rsp(streamer, rsp, streamer->ss_base.cb_arg);
+        rc = streamer->tx_rsp_cb(streamer, rsp, streamer->mgmt_stmr.cb_arg);
         rsp = NULL;
         if (rc != 0) {
             break;
         }
 
         /* Trim processed request to free up space for subsequent responses. */
-        rc = mgmt_streamer_trim_front(&streamer->ss_base, req,
+        rc = mgmt_streamer_trim_front(&streamer->mgmt_stmr, req,
                                       smp_align4(req_hdr.nh_len));
         assert(rc == 0);
     }
@@ -372,7 +372,7 @@ smp_process_single_packet(struct smp_streamer *streamer, void *req)
         return rc;
     }
 
-    mgmt_streamer_free_buf(&streamer->ss_base, req);
-    mgmt_streamer_free_buf(&streamer->ss_base, rsp);
+    mgmt_streamer_free_buf(&streamer->mgmt_stmr, req);
+    mgmt_streamer_free_buf(&streamer->mgmt_stmr, rsp);
     return 0;
 }

@@ -26,15 +26,17 @@ static struct mgmt_group *mgmt_group_list;
 static struct mgmt_group *mgmt_group_list_end;
 
 void *
-mgmt_streamer_alloc_rsp(struct mgmt_streamer *streamer, const void *req)
+mgmt_streamer_alloc_rsp(struct mgmt_streamer *streamer,
+                        const void *user_data, size_t user_data_len);
 {
-    return streamer->cfg->alloc_rsp(req, streamer->cb_arg);
+    return streamer->cfg->alloc_rsp(user_data, user_data_len,
+                                    streamer->cb_arg);
 }
 
-int
-mgmt_streamer_trim_front(struct mgmt_streamer *streamer, void *buf, int len)
+void
+mgmt_streamer_trim_front(struct mgmt_streamer *streamer, void *buf, size_t len)
 {
-    return streamer->cfg->trim_front(buf, len, streamer->cb_arg);
+    streamer->cfg->trim_front(buf, len, streamer->cb_arg);
 }
 
 void
@@ -44,7 +46,7 @@ mgmt_streamer_reset_buf(struct mgmt_streamer *streamer, void *buf)
 }
 
 int
-mgmt_streamer_write_at(struct mgmt_streamer *streamer, int offset,
+mgmt_streamer_write_at(struct mgmt_streamer *streamer, size_t offset,
                        const void *data, int len)
 {
     return streamer->cfg->write_at(streamer->writer, offset, data, len,
@@ -69,8 +71,8 @@ mgmt_streamer_free_buf(struct mgmt_streamer *streamer, void *buf)
     streamer->cfg->free_buf(buf, streamer->cb_arg);
 }
 
-int
-mgmt_group_register(struct mgmt_group *group)
+void
+mgmt_register_group(struct mgmt_group *group)
 {
     if (mgmt_group_list_end == NULL) {
         mgmt_group_list = group;
@@ -78,8 +80,6 @@ mgmt_group_register(struct mgmt_group *group)
         mgmt_group_list_end->mg_next = group;
     }
     mgmt_group_list_end = group;
-
-    return 0;
 }
 
 static struct mgmt_group *
@@ -114,7 +114,7 @@ mgmt_find_handler(uint16_t group_id, uint16_t command_id)
 }
 
 int
-mgmt_cbuf_setoerr(struct mgmt_cbuf *cbuf, int errcode)
+mgmt_write_rsp_status(struct mgmt_cbuf *cbuf, int errcode)
 {
     int rc;
 

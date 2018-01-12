@@ -26,7 +26,7 @@ extern "C" {
 
 struct mgmt_cbuf;
 
-/*
+/**
  * Command IDs for OS management group.
  */
 #define OS_MGMT_ID_ECHO             0
@@ -52,7 +52,10 @@ struct os_mgmt_task_info {
     char oti_name[OS_MGMT_TASK_NAME_LEN];
 };
 
-int os_mgmt_group_register(void);
+/**
+ * @brief Registers the OS management command handler group.
+ */ 
+void os_mgmt_register_group(void);
 
 #ifdef __cplusplus
 }

@@ -31,14 +31,10 @@ extern "C" {
 
 #define IMAGE_HEADER_SIZE           32
 
-/*
- * Image header flags.
- */
+/** Image header flags. */
 #define IMAGE_F_NON_BOOTABLE        0x00000010 /* Split image app. */
 
-/*
- * Image trailer TLV types.
- */
+/** Image trailer TLV types. */
 #define IMAGE_TLV_SHA256            0x10   /* SHA256 of image hdr and body */
 
 /** Image TLV-specific definitions. */

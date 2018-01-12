@@ -25,30 +25,31 @@ static const struct mgmt_streamer_cfg zephyr_smp_cbor_cfg = {
 };
 
 static void *
-zephyr_smp_alloc_rsp(const void *req, void *arg)
+zephyr_smp_alloc_rsp(const void *user_data, int user_data_len, void *arg)
 {
     const struct net_buf_pool *pool;
-    const struct net_buf *req_nb;
     struct net_buf *rsp_nb;
-
-    req_nb = req;
 
     rsp_nb = mcumgr_buf_alloc();
     if (rsp_nb == NULL) {
-        assert(0);
         return NULL;
     }
 
-    pool = net_buf_pool_get(req_nb->pool_id);
-    memcpy(net_buf_user_data(rsp_nb),
-           net_buf_user_data((void *)req_nb),
-           pool->user_data_size);
+    pool = net_buf_pool_get(rsp_nb->pool_id);
+    if (user_data_len > pool->user_data_size) {
+        zephyr_smp_free_buf(rsp_nb);
+        return NULL;
+    }
+
+    if (user_data_len > 0) {
+        memcpy(net_buf_user_data(rsp_nb), user_data, user_data_len);
+    }
 
     return rsp_nb;
 }
 
-static int
-zephyr_smp_trim_front(void *buf, int len, void *arg)
+static void
+zephyr_smp_trim_front(void *buf, size_t len, void *arg)
 {
     struct net_buf *nb;
 
@@ -58,8 +59,6 @@ zephyr_smp_trim_front(void *buf, int len, void *arg)
     }
 
     net_buf_pull(nb, len);
-
-    return 0;
 }
 
 static struct net_buf *
@@ -191,16 +190,16 @@ zephyr_smp_process_packet(struct zephyr_smp_transport *zst,
     int rc;
 
     streamer = (struct smp_streamer) {
-        .ss_base = {
+        .mgmt_stmr = {
             .cfg = &zephyr_smp_cbor_cfg,
             .reader = &reader.r,
             .writer = &writer.enc,
             .cb_arg = zst,
         },
-        .ss_tx_rsp = zephyr_smp_tx_rsp,
+        .tx_rsp_cb = zephyr_smp_tx_rsp,
     };
 
-    rc = smp_process_single_packet(&streamer, nb);
+    rc = smp_process_request_packet(&streamer, nb);
     return rc;
 }
 

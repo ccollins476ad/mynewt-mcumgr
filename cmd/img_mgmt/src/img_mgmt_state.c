@@ -29,7 +29,14 @@
 #include "img_mgmt_priv.h"
 #include "img_mgmt/img_mgmt_impl.h"
 
-uint8_t
+#define IMG_MGMT_STATE_F_PENDING    0x01
+#define IMG_MGMT_STATE_F_CONFIRMED  0x02
+#define IMG_MGMT_STATE_F_ACTIVE     0x04
+#define IMG_MGMT_STATE_F_PERMANENT  0x08
+
+#define IMG_MGMT_VER_MAX_STR_LEN    25  /* 255.255.65535.4294967295\0 */
+
+static uint8_t
 img_mgmt_state_flags(int query_slot)
 {
     uint8_t flags;
@@ -152,7 +159,7 @@ img_mgmt_state_read(struct mgmt_cbuf *cb)
     uint32_t flags;
     struct image_version ver;
     uint8_t hash[IMAGE_HASH_LEN]; /* SHA256 hash */
-    char vers_str[IMG_MGMT_MAX_VER];
+    char vers_str[IMG_MGMT_VER_MAX_STR_LEN];
     int any_non_bootable;
     uint8_t state_flags;
     CborError g_err = CborNoError;

@@ -56,21 +56,17 @@ mynewt_smp_rsp_frag_alloc(uint16_t frag_size, void *arg)
 }
 
 static void *
-mynewt_smp_alloc_rsp(const void *req, void *arg)
+mynewt_smp_alloc_rsp(const void *user_data, int user_data_len, void *arg)
 {
-    const struct os_mbuf *om_req;
     struct os_mbuf *om_rsp;
 
-    om_req = req;
-    om_rsp = os_msys_get_pkthdr(512, OS_MBUF_USRHDR_LEN(om_req));
+    om_rsp = os_msys_get_pkthdr(512, OS_MBUF_USRHDR_LEN(user_data_len));
     if (om_rsp == NULL) {
         return NULL;
     }
 
     /* Copy the request user header into the response. */
-    memcpy(OS_MBUF_USRHDR(om_rsp),
-           OS_MBUF_USRHDR(om_req),
-           OS_MBUF_USRHDR_LEN(om_req));
+    memcpy(OS_MBUF_USRHDR(om_rsp), user_data, user_data_len);
 
     return om_rsp;
 }
@@ -187,13 +183,13 @@ mynewt_smp_process(struct mynewt_smp_transport *mst)
     int rc;
 
     streamer = (struct smp_streamer) {
-        .ss_base = {
+        .mgmt_stmr = {
             .cfg = &mynewt_smp_cbor_cfg,
             .reader = &reader.r,
             .writer = &writer.enc,
             .cb_arg = mst,
         },
-        .ss_tx_rsp = mynewt_smp_tx_rsp,
+        .tx_rsp_cb = mynewt_smp_tx_rsp,
     };
 
     while (1) {
@@ -202,7 +198,7 @@ mynewt_smp_process(struct mynewt_smp_transport *mst)
             break;
         }
 
-        rc = smp_process_single_packet(&streamer, req);
+        rc = smp_process_request_packet(&streamer, req);
         if (rc != 0) {
             break;
         }

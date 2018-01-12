@@ -17,7 +17,22 @@
  * under the License.
  */
 
-/** SMP - Simple Management Protocol. */
+/**
+ * @file
+ * @brief SMP - Simple Management Protocol.
+ *
+ * SMP is a basic protocol that sits on top of the mgmt layer.  SMP requests
+ * and responses have the following format:
+ *
+ *     [Offset 0]: Mgmt header
+ *     [Offset 8]: CBOR map of command-specific key-value pairs.
+ *
+ * SMP request packets may contain multiple requests.  In this case, the
+ * sequence of requests are concatenated in a single packet with no padding in
+ * between.  Requests are processed sequentially from the start of the packet
+ * to the end.  Each response is sent individually in its own packet.  If a
+ * request elicits an error response, processing of the packet is aborted.
+ */
 
 #ifndef H_SMP_
 #define H_SMP_
@@ -31,18 +46,42 @@ extern "C" {
 struct smp_streamer;
 struct mgmt_hdr;
 
+/** @typedef smp_tx_rsp_fn
+ * @brief Transmits an SMP response packet.
+ *
+ * @param ss                    The streamer to transmit via.
+ * @param buf                   Buffer containing the response packet.
+ * @param arg                   Optional streamer argument.
+ *
+ * @return                      0 on success, MGMT_ERR_[...] code on failure.
+ */
 typedef int smp_tx_rsp_fn(struct smp_streamer *ss, void *buf, void *arg);
 
-/** Decodes, encodes, and transmits SMP packets. */
+/**
+ * @brief Decodes, encodes, and transmits SMP packets.
+ */
 struct smp_streamer {
-    struct mgmt_streamer ss_base;
-    smp_tx_rsp_fn *ss_tx_rsp;
+    struct mgmt_streamer mgmt_stmr;
+    smp_tx_rsp_fn *tx_rsp_cb;
 };
 
-void smp_ntoh_hdr(struct mgmt_hdr *hdr);
-int smp_handle_single_payload(struct mgmt_cbuf *cbuf,
-                              const struct mgmt_hdr *req_hdr);
-int smp_process_single_packet(struct smp_streamer *streamer, void *req);
+/**
+ * @brief Processes a single SMP request packet and sends all corresponding
+ *        responses.
+ *
+ * Processes all SMP requests in an incoming packet.  Requests are processed
+ * sequentially from the start of the packet to the end.  Each response is sent
+ * individually in its own packet.  If a request elicits an error response,
+ * processing of the packet is aborted.  This function consumes the supplied
+ * request buffer regardless of the outcome.
+ *
+ * @param streamer              The streamer providing the required SMP
+ *                                  callbacks.
+ * @param req                   The request packet to process.
+ *
+ * @return                      0 on success, MGMT_ERR_[...] code on failure.
+ */
+int smp_process_request_packet(struct smp_streamer *streamer, void *req);
 
 #ifdef __cplusplus
 }

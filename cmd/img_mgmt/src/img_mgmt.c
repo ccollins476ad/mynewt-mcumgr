@@ -373,7 +373,7 @@ img_mgmt_upload(struct mgmt_cbuf *cb)
 }
 
 int
-img_mgmt_group_register(void)
+img_mgmt_register_group(void)
 {
-    return mgmt_group_register(&img_mgmt_group);
+    return mgmt_register_group(&img_mgmt_group);
 }

@@ -181,7 +181,7 @@ img_mgmt_module_init(void)
     /* Ensure this function only gets called by sysinit. */
     SYSINIT_ASSERT_ACTIVE();
 
-    rc = img_mgmt_group_register();
+    rc = img_mgmt_register_group();
     SYSINIT_PANIC_ASSERT(rc == 0);
 
 #if MYNEWT_VAL(IMGMGR_CLI)

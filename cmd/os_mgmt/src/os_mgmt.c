@@ -287,7 +287,7 @@ os_mgmt_datetime_set(struct mgmt_cbuf *cb)
         return MGMT_ERR_EINVAL;
     }
 
-    rc = mgmt_cbuf_setoerr(cb, 0);
+    rc = mgmt_write_rsp_status(cb, 0);
     if (rc != 0) {
         return rc;
     }
@@ -394,8 +394,8 @@ os_mgmt_reset(struct mgmt_cbuf *cb)
     return os_mgmt_impl_reset();
 }
 
-int
-os_mgmt_group_register(void)
+void
+os_mgmt_register_group(void)
 {
-    return mgmt_group_register(&os_mgmt_group);
+    mgmt_register_group(&os_mgmt_group);
 }

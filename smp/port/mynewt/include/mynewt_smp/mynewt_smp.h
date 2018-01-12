@@ -29,34 +29,65 @@ struct mynewt_smp_transport;
 extern "C" {
 #endif
 
-/**
- * Transmit function.  The supplied mbuf is always consumed, regardless of
- * return code.
+/** @typedef mynewt_smp_transport_out_fn
+ * @brief SMP transmit function for Mynewt.
+ *
+ * The supplied mbuf is always consumed, regardless of return code.
+ *
+ * @param mst                   The transport to send via.
+ * @param om                    The mbuf to transmit.
+ *
+ * @return                      0 on success, MGMT_ERR_[...] code on failure.
  */
 typedef int mynewt_smp_transport_out_fn(struct mynewt_smp_transport *mst,
-                                        struct os_mbuf *m);
+                                        struct os_mbuf *om);
 
-/**
- * MTU query function.  The supplied mbuf should contain a request received
- * from the peer whose MTU is being queried.  This function takes an mbuf
- * parameter because some transports store connection-specific information in
- * the mbuf user header (e.g., the BLE transport stores the connection handle).
+/** @typedef mynewt_smp_transport_get_mtu_fn
+ * @brief SMP MTU query function for Mynewt.
+ *
+ * The supplied mbuf should contain a request received from the peer whose MTU
+ * is being queried.  This function takes an mbuf parameter because some
+ * transports store connection-specific information in the mbuf user header
+ * (e.g., the BLE transport stores the connection handle).
+ *
+ * @param om                    Contains a request from the relevant peer.
  *
  * @return                      The transport's MTU;
  *                              0 if transmission is currently not possible.
  */
-typedef uint16_t mynewt_smp_transport_get_mtu_fn(struct os_mbuf *m);
+typedef uint16_t mynewt_smp_transport_get_mtu_fn(struct os_mbuf *om);
 
+/**
+ * @brief Provides Mynewt-specific functionality for sending SMP responses.
+ */ 
 struct mynewt_smp_transport {
     struct os_mqueue mst_imq;
     mynewt_smp_transport_out_fn *mst_output;
     mynewt_smp_transport_get_mtu_fn *mst_get_mtu;
 };
 
+/**
+ * @brief Initializes a Mynewt SMP transport object.
+ *
+ * @param mst                   The transport to construct.
+ * @param output_func           The transport's send function.
+ * @param get_mtu_func          The transport's get-MTU function.
+ *
+ * @return                      0 on success, MGMT_ERR_[...] code on failure.
+ */
 int mynewt_smp_transport_init(struct mynewt_smp_transport *mst,
                               mynewt_smp_transport_out_fn *output_func,
                               mynewt_smp_transport_get_mtu_fn *get_mtu_func);
 
+/**
+ * @brief Processes an incoming SMP request packet.
+ *
+ * @param mst                   The transport to use to send the corresponding
+ *                                  response(s).
+ * @param req                   The request packet to process.
+ *
+ * @return                      0 on success, MGMT_ERR_[...] code on failure.
+ */
 int mynewt_smp_rx_req(struct mynewt_smp_transport *mst, struct os_mbuf *req);
 
 #ifdef __cplusplus

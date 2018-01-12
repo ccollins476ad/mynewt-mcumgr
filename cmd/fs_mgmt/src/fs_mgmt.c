@@ -201,10 +201,10 @@ fs_mgmt_file_upload(struct mgmt_cbuf *cb)
 }
 
 int
-fs_mgmt_group_register(void)
+fs_mgmt_register_group(void)
 {
     int rc;
 
-    rc = mgmt_group_register(&fs_mgmt_group);
+    rc = mgmt_register_group(&fs_mgmt_group);
     return rc;
 }
