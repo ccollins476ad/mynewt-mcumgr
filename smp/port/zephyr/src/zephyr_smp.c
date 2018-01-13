@@ -20,7 +20,7 @@
 #include <zephyr.h>
 #include "net/buf.h"
 #include "mgmt/mgmt.h"
-#include "mgmt/buf.h"
+#include "zephyr_mgmt/buf.h"
 #include "smp/smp.h"
 #include "zephyr_smp/zephyr_smp.h"
 

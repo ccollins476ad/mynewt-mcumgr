@@ -20,7 +20,7 @@
 #include <assert.h>
 #include <string.h>
 #include "net/buf.h"
-#include "mgmt/buf.h"
+#include "zephyr_mgmt/buf.h"
 #include "compilersupport_p.h"
 
 /* XXX: Make these configurable. */

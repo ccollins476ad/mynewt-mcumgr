@@ -6,6 +6,7 @@ target_include_directories(MCUMGR INTERFACE
     cmd/img_mgmt/include
     cmd/os_mgmt/include
     mgmt/include
+    mgmt/port/zephyr/include
     smp/include
     smp/port/zephyr/include
 )
@@ -25,6 +26,7 @@ zephyr_library_sources(
     cmd/os_mgmt/src/os_mgmt.c
     cmd/os_mgmt/src/stubs.c
     mgmt/src/mgmt.c
+    mgmt/port/zephyr/src/buf.c
     smp/port/zephyr/src/zephyr_smp.c
     smp/src/smp.c
 )
