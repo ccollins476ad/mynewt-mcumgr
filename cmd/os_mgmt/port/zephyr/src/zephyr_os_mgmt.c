@@ -25,9 +25,6 @@
 #include "os_mgmt/os_mgmt.h"
 #include "os_mgmt/os_mgmt_impl.h"
 
-/* XXX: Make this configurable. */
-#define ZEPHYR_OS_MGMT_RESET_MS 250
-
 static void zephyr_os_mgmt_reset_cb(struct k_timer *timer);
 
 static K_TIMER_DEFINE(zephyr_os_mgmt_reset_timer,
@@ -83,7 +80,7 @@ zephyr_os_mgmt_reset_cb(struct k_timer *timer)
 int
 os_mgmt_impl_reset(void)
 {
-    k_timer_start(&zephyr_os_mgmt_reset_timer, K_MSEC(ZEPHYR_OS_MGMT_RESET_MS),
+    k_timer_start(&zephyr_os_mgmt_reset_timer, K_MSEC(CONFIG_OS_MGMT_RESET_MS),
                   0);
 
     return 0;

@@ -23,13 +23,8 @@
 #include "zephyr_mgmt/buf.h"
 #include "compilersupport_p.h"
 
-/* XXX: Make these configurable. */
-#define MCUMGR_BUF_COUNT                8
-#define MCUMGR_BUF_SIZE                 1024
-#define MCUMGR_BUF_USER_DATA_SIZE       7
-
-NET_BUF_POOL_DEFINE(pkt_pool, MCUMGR_BUF_COUNT, MCUMGR_BUF_SIZE,
-                    MCUMGR_BUF_USER_DATA_SIZE, NULL);
+NET_BUF_POOL_DEFINE(pkt_pool, CONFIG_MCUMGR_BUF_COUNT, CONFIG_MCUMGR_BUF_SIZE,
+                    CONFIG_MCUMGR_BUF_USER_DATA_SIZE, NULL);
 
 struct net_buf *
 mcumgr_buf_alloc(void)

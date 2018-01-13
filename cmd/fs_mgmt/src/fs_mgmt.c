@@ -24,11 +24,6 @@
 #include "fs_mgmt/fs_mgmt.h"
 #include "fs_mgmt/fs_mgmt_impl.h"
 
-/* XXX: Make these configurable. */
-#define FS_MGMT_UPLOAD_CHUNK_SIZE   512
-#define FS_MGMT_DOWNLOAD_CHUNK_SIZE 512
-#define FS_MGMT_PATH_MAX_LEN        64
-
 static mgmt_handler_fn fs_mgmt_file_download;
 static mgmt_handler_fn fs_mgmt_file_upload;
 
@@ -65,8 +60,8 @@ static struct mgmt_group fs_mgmt_group = {
 static int
 fs_mgmt_file_download(struct mgmt_ctxt *ctxt)
 {
-    uint8_t file_data[FS_MGMT_DOWNLOAD_CHUNK_SIZE];
-    char path[FS_MGMT_PATH_MAX_LEN + 1];
+    uint8_t file_data[CONFIG_FS_MGMT_DL_CHUNK_SIZE];
+    char path[CONFIG_FS_MGMT_PATH_SIZE + 1];
     unsigned long long off;
     CborError err;
     size_t bytes_read;
@@ -105,7 +100,7 @@ fs_mgmt_file_download(struct mgmt_ctxt *ctxt)
     }
 
     /* Read the requested chunk from the file. */
-    rc = fs_mgmt_impl_read(path, off, FS_MGMT_DOWNLOAD_CHUNK_SIZE,
+    rc = fs_mgmt_impl_read(path, off, CONFIG_FS_MGMT_DL_CHUNK_SIZE,
                            file_data, &bytes_read);
     if (rc != 0) {
         return rc;
@@ -158,8 +153,8 @@ fs_mgmt_file_upload_rsp(struct mgmt_ctxt *ctxt, int rc, unsigned long long off)
 static int
 fs_mgmt_file_upload(struct mgmt_ctxt *ctxt)
 {
-    uint8_t file_data[FS_MGMT_UPLOAD_CHUNK_SIZE];
-    char file_name[FS_MGMT_PATH_MAX_LEN + 1];
+    uint8_t file_data[CONFIG_FS_MGMT_UL_CHUNK_SIZE];
+    char file_name[CONFIG_FS_MGMT_PATH_SIZE + 1];
     unsigned long long len;
     unsigned long long off;
     size_t data_len;

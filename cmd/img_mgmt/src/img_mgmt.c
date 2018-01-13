@@ -29,9 +29,6 @@
 #include "img_mgmt/img_mgmt_impl.h"
 #include "img_mgmt_priv.h"
 
-/* XXX: Make this configurable. */
-#define IMG_MGMT_MAX_CHUNK_SIZE 512
-
 static mgmt_handler_fn img_mgmt_upload;
 static mgmt_handler_fn img_mgmt_erase;
 
@@ -310,7 +307,7 @@ img_mgmt_upload_first_chunk(struct mgmt_ctxt *ctxt, const uint8_t *req_data,
 static int
 img_mgmt_upload(struct mgmt_ctxt *ctxt)
 {
-    uint8_t img_mgmt_data[IMG_MGMT_MAX_CHUNK_SIZE];
+    uint8_t img_mgmt_data[CONFIG_IMG_MGMT_UL_CHUNK_SIZE];
     unsigned long long len;
     unsigned long long off;
     size_t data_len;
