@@ -33,8 +33,14 @@ static mgmt_handler_fn fs_mgmt_file_download;
 static mgmt_handler_fn fs_mgmt_file_upload;
 
 static struct {
-    uint32_t off;
-    uint32_t size;
+    /** Whether an upload is currently in progress. */
+    bool uploading;
+
+    /** Expected offset of next upload request. */
+    size_t off;
+
+    /** Total length of file currently being uploaded. */
+    size_t len;
 } fs_mgmt_ctxt;
 
 static const struct mgmt_handler fs_mgmt_handlers[] = {
@@ -157,6 +163,7 @@ fs_mgmt_file_upload(struct mgmt_ctxt *ctxt)
     unsigned long long len;
     unsigned long long off;
     size_t data_len;
+    size_t new_off;
     int rc;
 
     const struct cbor_attr_t uload_attr[5] = {
@@ -201,20 +208,40 @@ fs_mgmt_file_upload(struct mgmt_ctxt *ctxt)
             return MGMT_ERR_EINVAL;
         }
 
+        fs_mgmt_ctxt.uploading = true;
         fs_mgmt_ctxt.off = 0;
         fs_mgmt_ctxt.len = len;
-    } else if (off != fs_mgmt_ctxt.off) {
-        /* Invalid offset.  Drop the data and send the expected offset. */
-        return fs_mgmt_file_upload_rsp(ctxt, MGMT_ERR_EINVAL,
-                                       fs_mgmt_ctxt.off);
+    } else {
+        if (!fs_mgmt_ctxt.uploading) {
+            return MGMT_ERR_EINVAL;
+        }
+        
+        if (off != fs_mgmt_ctxt.off) {
+            /* Invalid offset.  Drop the data and send the expected offset. */
+            return fs_mgmt_file_upload_rsp(ctxt, MGMT_ERR_EINVAL,
+                                           fs_mgmt_ctxt.off);
+        }
     }
 
-    /* Write the data chunk to the file. */
-    rc = fs_mgmt_impl_write(file_name, off, file_data, data_len);
-    if (rc != 0) {
-        return rc;
+    new_off = fs_mgmt_ctxt.off + data_len;
+    if (new_off > fs_mgmt_ctxt.len) {
+        /* Data exceeds image length. */
+        return MGMT_ERR_EINVAL;
     }
-    fs_mgmt_ctxt.off += data_len;
+
+    if (data_len > 0) {
+        /* Write the data chunk to the file. */
+        rc = fs_mgmt_impl_write(file_name, off, file_data, data_len);
+        if (rc != 0) {
+            return rc;
+        }
+        fs_mgmt_ctxt.off = new_off;
+    }
+
+    if (new_off == fs_mgmt_ctxt.len) {
+        /* Upload complete. */
+        fs_mgmt_ctxt.uploading = false;
+    }
 
     /* Send the response. */
     return fs_mgmt_file_upload_rsp(ctxt, 0, fs_mgmt_ctxt.off);

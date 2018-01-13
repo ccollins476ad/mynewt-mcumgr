@@ -216,7 +216,7 @@ zephyr_smp_init_reader(struct cbor_decoder_reader *reader, void *buf,
     struct cbor_nb_reader *czr;
 
     czr = (struct cbor_nb_reader *)reader;
-    cbor_nb_reader_init(czr, buf, 0);
+    cbor_nb_reader_init(czr, buf);
 
     return 0;
 }

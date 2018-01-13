@@ -60,9 +60,14 @@ static struct mgmt_group img_mgmt_group = {
 };
 
 static struct {
-    size_t off;
-    size_t image_len;
+    /* Whether an upload is currently in progress. */
     bool uploading;
+
+    /** Expected offset of next upload request. */
+    size_t off;
+
+    /** Total length of image currently being uploaded. */
+    size_t len;
 } img_mgmt_ctxt;
 
 /**
@@ -101,8 +106,8 @@ img_mgmt_read_info(int image_slot, struct image_version *ver, uint8_t *hash,
 {
     struct image_header hdr;
     struct image_tlv tlv;
-    uint32_t data_off;
-    uint32_t data_end;
+    size_t data_off;
+    size_t data_end;
     bool hash_found;
     int rc;
 
@@ -172,7 +177,7 @@ img_mgmt_read_info(int image_slot, struct image_version *ver, uint8_t *hash,
     }
 
     if (!hash_found) {
-        return MGMT_ERR_UNKNOWN;
+        return MGMT_ERR_EUNKNOWN;
     }
 
     return 0;
@@ -271,7 +276,6 @@ img_mgmt_upload_first_chunk(struct mgmt_ctxt *ctxt, const uint8_t *req_data,
                             size_t len)
 {
     struct image_header hdr;
-    size_t new_off;
     int rc;
 
     if (len < sizeof hdr) {
@@ -295,7 +299,7 @@ img_mgmt_upload_first_chunk(struct mgmt_ctxt *ctxt, const uint8_t *req_data,
 
     img_mgmt_ctxt.uploading = true;
     img_mgmt_ctxt.off = 0;
-    img_mgmt_ctxt.image_len = 0;
+    img_mgmt_ctxt.len = 0;
 
     return 0;
 }
@@ -310,6 +314,7 @@ img_mgmt_upload(struct mgmt_ctxt *ctxt)
     unsigned long long len;
     unsigned long long off;
     size_t data_len;
+    size_t new_off;
     bool last;
     int rc;
 
@@ -354,7 +359,7 @@ img_mgmt_upload(struct mgmt_ctxt *ctxt)
         if (rc != 0) {
             return rc;
         }
-        img_mgmt_ctxt.image_len = len;
+        img_mgmt_ctxt.len = len;
     } else {
         if (!img_mgmt_ctxt.uploading) {
             return MGMT_ERR_EINVAL;
@@ -366,25 +371,25 @@ img_mgmt_upload(struct mgmt_ctxt *ctxt)
         }
     }
 
-    if (data_len > 0) {
-        new_off = img_mgmt_ctxt.off + data_len;
-        if (new_off > img_mgmt_ctxt.image_len) {
-            /* Data exceeds image length. */
-            return MGMT_ERR_EINVAL;
-        }
+    new_off = img_mgmt_ctxt.off + data_len;
+    if (new_off > img_mgmt_ctxt.len) {
+        /* Data exceeds image length. */
+        return MGMT_ERR_EINVAL;
+    }
+    last = new_off == img_mgmt_ctxt.len;
 
-        last = new_off == img_mgmt_ctxt.image_len;
+    if (data_len > 0) {
         rc = img_mgmt_impl_write_image_data(off, img_mgmt_data, data_len,
                                             last);
         if (rc != 0) {
             return rc;
         }
+    }
 
-        img_mgmt_ctxt.off = new_off;
-        if (last) {
-            /* Upload complete. */
-            img_mgmt_ctxt.uploading = false;
-        }
+    img_mgmt_ctxt.off = new_off;
+    if (last) {
+        /* Upload complete. */
+        img_mgmt_ctxt.uploading = false;
     }
 
     return img_mgmt_encode_upload_rsp(ctxt, 0);
