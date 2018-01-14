@@ -1,6 +1,6 @@
 add_library(TINYCBOR INTERFACE)
 
-zephyr_include_directories(src)
+target_include_directories(TINYCBOR INTERFACE src)
 
 zephyr_library()
 zephyr_library_sources(
