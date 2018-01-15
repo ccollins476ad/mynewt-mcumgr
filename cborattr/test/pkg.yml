@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-pkg.name: encoding/cborattr/test
+pkg.name: cborattr/test
 pkg.type: unittest
 pkg.description: "CBOR attr unit tests."
 pkg.author: "Apache Mynewt <dev@mynewt.apache.org>"
@@ -23,9 +23,8 @@ pkg.homepage: "http://mynewt.apache.org/"
 pkg.keywords:
 
 pkg.deps:
-    - encoding/tinycbor
-    - encoding/cborattr
-    - test/testutil
+    - '@mynewt-mcumgr/ext/tinycbor'
+    - '@mynewt-mcumgr/cborattr'
 
 pkg.deps.SELFTEST:
     - sys/console/stub
