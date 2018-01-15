@@ -1,3 +1,4 @@
+#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -5,7 +6,7 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-#
+# 
 #  http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing,
@@ -16,19 +17,10 @@
 # under the License.
 #
 
-# Package: mgmt/imgmgr
-
 syscfg.defs:
-    IMGMGR_COREDUMP:
-        description: 'Newtmgr commands for fetching/erasing coredump'
-        value: 0
-    IMGMGR_CLI:
-        description: 'CLI commands to interact with image management'
-        value: 0
-        restrictions:
-            - SHELL_TASK
-    IMGMGR_MAX_CHUNK_SIZE:
+    IMG_MGMT_UL_CHUNK_SIZE:
         description: >
-            The maximum amount of image or core data that can fit in a
-            single NMP message
+            Limits the maximum chunk size in image uploads.  A buffer of this
+            size gets allocated on the stack during handling of a image upload
+            command.
         value: 512
