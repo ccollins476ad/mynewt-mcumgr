@@ -23,6 +23,7 @@ pkg.homepage: "http://mynewt.apache.org/"
 pkg.keywords:
 
 pkg.deps: 
+    - '@apache-mynewt-core/boot/bootutil'
     - '@apache-mynewt-core/mgmt/newtmgr/transport/ble'
     - '@apache-mynewt-core/mgmt/newtmgr/transport/nmgr_shell'
     - '@apache-mynewt-core/net/nimble/controller'
@@ -34,6 +35,7 @@ pkg.deps:
     - '@apache-mynewt-core/net/nimble/transport/ram'
     - '@apache-mynewt-core/sys/console/full'
     - '@apache-mynewt-core/sys/log/full'
+    - '@apache-mynewt-core/sys/stats/full'
     - '@mynewt-mcumgr/cmd/fs_mgmt/port/mynewt'
     - '@mynewt-mcumgr/cmd/img_mgmt/port/mynewt'
     - '@mynewt-mcumgr/cmd/os_mgmt/port/mynewt'
