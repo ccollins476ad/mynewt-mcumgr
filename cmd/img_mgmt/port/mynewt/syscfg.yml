@@ -17,15 +17,10 @@
 # under the License.
 #
 
-pkg.name: cmd/img_mgmt/port/mynewt
-pkg.description: 'Image management command handlers for mcumgr.'
-pkg.author: "Apache Mynewt <dev@mynewt.apache.org>"
-pkg.homepage: "http://mynewt.apache.org/"
-pkg.keywords:
-
-pkg.deps:
-    - '@apache-mynewt-core/boot/split'
-    - '@apache-mynewt-core/encoding/base64'
-    - '@apache-mynewt-core/sys/flash_map'
-    - '@mynewt-mcumgr/cmd/img'
-    - '@mynewt-mcumgr/mgmt'
+syscfg.defs:
+    IMG_MGMT_UL_CHUNK_SIZE:
+        description: >
+            Limits the maximum chunk size in image uploads.  A buffer of this
+            size gets allocated on the stack during handling of a image upload
+            command.
+        value: 512

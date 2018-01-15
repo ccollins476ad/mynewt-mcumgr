@@ -17,25 +17,24 @@
 # under the License.
 #
 
-pkg.name: smp
-pkg.description: Server-side simple management protocol (SMP) functionality.
-pkg.author: "Apache Mynewt <dev@mynewt.apache.org>"
-pkg.homepage: "http://mynewt.apache.org/"
-pkg.keywords:
+syscfg.defs:
+    FS_MGMT_UL_CHUNK_SIZE:
+        description: >
+            Limits the maximum chunk size in file uploads.  A buffer of this
+            size gets allocated on the stack during handling of a file upload
+            command.
+        value: 512
 
-pkg.deps:
-    - '@apache-mynewt-core/encoding/cborattr'
-    - '@apache-mynewt-core/kernel/os'
-    - '@apache-mynewt-core/util/mem'
-    - '@mynewt-mcumgr/mgmt'
-    - '@mynewt-mcumgr/smp/port/mynewt'
+    FS_MGMT_DL_CHUNK_SIZE:
+        description: >
+            Limits the maximum chunk size in file downloads.  A buffer of this
+            size gets allocated on the stack during handling of a file download
+            command.
+        value: 512
 
-pkg.deps.NEWTMGR_BLE_HOST:
-    # XXX: Inaccurate path.
-    - mgmt/newtmgr/transport/ble
-
-pkg.apis:
-    - smp
-
-pkg.init:
-    smp_pkg_init: 500
+    FS_MGMT_PATH_SIZE:
+        description: >
+            Limits the maximum path length in file operations.  A buffer of
+            this size gets allocated on the stack during handling of file
+            upload and download commands.
+        value: 64

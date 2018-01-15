@@ -17,13 +17,11 @@
 # under the License.
 #
 
-pkg.name: mgmt
-pkg.description: System-wide management interfaces.
+pkg.name: cmd/fs_mgmt/port/mynewt
+pkg.description: 'File system command handlers for mcumgr.'
 pkg.author: "Apache Mynewt <dev@mynewt.apache.org>"
 pkg.homepage: "http://mynewt.apache.org/"
 pkg.keywords:
 
 pkg.deps:
-    - '@apache-mynewt-core/encoding/tinycbor'
-    - '@apache-mynewt-core/kernel/os'
-    - '@mynewt-mcumgr/mgmt/port/mynewt'
+    - '@apache-mynewt-core/fs/fs'

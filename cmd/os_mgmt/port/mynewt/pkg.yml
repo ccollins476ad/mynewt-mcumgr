@@ -17,15 +17,11 @@
 # under the License.
 #
 
-pkg.name: cmd/img_mgmt/port/mynewt
-pkg.description: 'Image management command handlers for mcumgr.'
+pkg.name: cmd/os_mgmt/port/mynewt
+pkg.description: 'OS management command handlers for mcumgr.'
 pkg.author: "Apache Mynewt <dev@mynewt.apache.org>"
 pkg.homepage: "http://mynewt.apache.org/"
 pkg.keywords:
 
 pkg.deps:
-    - '@apache-mynewt-core/boot/split'
-    - '@apache-mynewt-core/encoding/base64'
-    - '@apache-mynewt-core/sys/flash_map'
-    - '@mynewt-mcumgr/cmd/img'
-    - '@mynewt-mcumgr/mgmt'
+    - '@apache-mynewt-core/kernel/os'

@@ -17,7 +17,7 @@
 #
 pkg.name: encoding/base64/test
 pkg.type: unittest
-pkg.description: "Crypto encoding unit tests."
+pkg.description: "base64 encoding unit tests."
 pkg.author: "Apache Mynewt <dev@mynewt.apache.org>"
 pkg.homepage: "http://mynewt.apache.org/"
 pkg.keywords:

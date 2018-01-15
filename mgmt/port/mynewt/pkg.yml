@@ -18,10 +18,12 @@
 #
 
 pkg.name: mgmt/port/mynewt
-pkg.description: XXX
+pkg.description: 'System-wide mcumgr management interfaces.'
 pkg.author: "Apache Mynewt <dev@mynewt.apache.org>"
 pkg.homepage: "http://mynewt.apache.org/"
 pkg.keywords:
 
 pkg.deps:
+    - '@apache-mynewt-core/encoding/tinycbor'
     - '@apache-mynewt-core/kernel/os'
+    - '@mynewt-mcumgr/mgmt/port/mynewt'

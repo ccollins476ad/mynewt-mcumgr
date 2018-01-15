@@ -18,12 +18,23 @@
 #
 
 pkg.name: smp/port/mynewt
-pkg.description: Server-side newtmgr functionality.
+pkg.description: Server-side simple management protocol (SMP) functionality.
 pkg.author: "Apache Mynewt <dev@mynewt.apache.org>"
 pkg.homepage: "http://mynewt.apache.org/"
 pkg.keywords:
 
 pkg.deps:
+    - '@apache-mynewt-core/encoding/cborattr'
     - '@apache-mynewt-core/kernel/os'
     - '@apache-mynewt-core/util/mem'
     - '@mynewt-mcumgr/mgmt'
+    - '@mynewt-mcumgr/smp/port/mynewt'
+
+pkg.deps.NEWTMGR_BLE_HOST:
+    - '@apache-mynewt-core/mgmt/newtmgr/transport/ble'
+
+pkg.apis:
+    - newtmgr
+
+pkg.init:
+    smp_pkg_init: 500
