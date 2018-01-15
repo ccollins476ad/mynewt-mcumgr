@@ -18,7 +18,11 @@
 menuconfig MCUMGR_CMD_IMG_MGMT
     bool
     prompt "Enable mcumgr handlers for image management"
+    select FLASH
     select MPU_ALLOW_FLASH_WRITE
+    select IMG_MANAGER
+    select MCUBOOT_IMG_MANAGER
+
     default n
     help
       Enables mcumgr handlers for image management

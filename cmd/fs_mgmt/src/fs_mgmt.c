@@ -234,7 +234,7 @@ fs_mgmt_file_upload(struct mgmt_ctxt *ctxt)
         fs_mgmt_ctxt.off = new_off;
     }
 
-    if (new_off == fs_mgmt_ctxt.len) {
+    if (fs_mgmt_ctxt.off == fs_mgmt_ctxt.len) {
         /* Upload complete. */
         fs_mgmt_ctxt.uploading = false;
     }
