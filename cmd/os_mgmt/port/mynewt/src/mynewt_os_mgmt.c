@@ -100,7 +100,7 @@ os_mgmt_impl_task_info(int idx, struct os_mgmt_task_info *out_info)
 }
 
 int
-os_mgmt_impl_reset(void)
+os_mgmt_impl_reset(unsigned int delay_ms)
 {
     int rc;
 
@@ -110,7 +110,7 @@ os_mgmt_impl_reset(void)
 #if MYNEWT_VAL(LOG_SOFT_RESET)
     log_reboot(HAL_RESET_REQUESTED);
 #endif
-    os_callout_reset(&nmgr_reset_callout, OS_TICKS_PER_SEC / 4);
+    os_callout_reset(&nmgr_reset_callout, delay_ms * OS_TICKS_PER_SEC / 1000);
 
     return 0;
 }

@@ -19,11 +19,12 @@
 
 #include <assert.h>
 #include <string.h>
+#include "cbor.h"
+#include "cborattr/cborattr.h"
 #include "mgmt/mgmt.h"
 #include "os_mgmt/os_mgmt.h"
 #include "os_mgmt/os_mgmt_impl.h"
-#include "cbor.h"
-#include "cborattr/cborattr.h"
+#include "os_mgmt_config.h"
 
 static mgmt_handler_fn os_mgmt_echo;
 static mgmt_handler_fn os_mgmt_reset;
@@ -179,7 +180,7 @@ os_mgmt_taskstat_read(struct mgmt_ctxt *ctxt)
 static int
 os_mgmt_reset(struct mgmt_ctxt *ctxt)
 {
-    return os_mgmt_impl_reset();
+    return os_mgmt_impl_reset(OS_MGMT_RESET_MS);
 }
 
 void

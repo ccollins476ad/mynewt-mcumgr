@@ -53,7 +53,7 @@ int os_mgmt_impl_task_info(int idx, struct os_mgmt_task_info *out_info);
  *
  * @return                      0 on success, MGMT_ERR_[...] code on failure.
  */
-int os_mgmt_impl_reset(void);
+int os_mgmt_impl_reset(unsigned int delay_ms);
 
 #ifdef __cplusplus
 }

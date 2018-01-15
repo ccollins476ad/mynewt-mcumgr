@@ -78,10 +78,8 @@ zephyr_os_mgmt_reset_cb(struct k_timer *timer)
 }
 
 int
-os_mgmt_impl_reset(void)
+os_mgmt_impl_reset(unsigned int delay_ms)
 {
-    k_timer_start(&zephyr_os_mgmt_reset_timer, K_MSEC(CONFIG_OS_MGMT_RESET_MS),
-                  0);
-
+    k_timer_start(&zephyr_os_mgmt_reset_timer, K_MSEC(delay_ms), 0);
     return 0;
 }
