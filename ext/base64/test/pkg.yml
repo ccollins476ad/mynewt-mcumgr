@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-pkg.name: encoding/base64/test
+pkg.name: ext/base64/test
 pkg.type: unittest
 pkg.description: "base64 encoding unit tests."
 pkg.author: "Apache Mynewt <dev@mynewt.apache.org>"
@@ -23,8 +23,8 @@ pkg.homepage: "http://mynewt.apache.org/"
 pkg.keywords:
 
 pkg.deps: 
-    - test/testutil
-    - encoding/base64
+    - "@apache-mynewt-core/test/testutil"
+    - "@apache-mynewt-core/encoding/base64"
 
 pkg.deps.SELFTEST:
-    - sys/console/stub
+    - "@apache-mynewt-core/sys/console/stub"

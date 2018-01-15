@@ -27,7 +27,7 @@ pkg.deps:
     - '@apache-mynewt-core/encoding/cborattr'
     - '@apache-mynewt-core/kernel/os'
     - '@apache-mynewt-core/util/mem'
-    - '@mynewt-mcumgr/mgmt'
+    - '@mynewt-mcumgr/mgmt/port/mynewt'
     - '@mynewt-mcumgr/smp/port/mynewt'
 
 pkg.deps.NEWTMGR_BLE_HOST:
