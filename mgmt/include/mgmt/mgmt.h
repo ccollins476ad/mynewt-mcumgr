@@ -98,9 +98,6 @@ struct mgmt_reader {
     mgmt_read_fn *read_cb;
     size_t offset;
     size_t message_size;
-
-    uint8_t *chunk_dst_buf;
-    size_t chunk_dst_buf_len;
 };
 
 /** @typedef mgmt_alloc_rsp_fn

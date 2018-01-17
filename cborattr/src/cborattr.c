@@ -19,6 +19,7 @@
 
 #include "mgmt/mgmt.h"
 #include "cborattr/cborattr.h"
+#include "cborinternal_p.h"
 #include "cbor.h"
 
 #define CBORATTR_MAX_SIZE 512
@@ -143,8 +144,6 @@ cborattr_read_string(CborValue *it, void *dst, size_t max_len, size_t *out_len)
     size_t len;
 
     reader = it->source.token;
-    reader->chunk_dst_buf = dst;
-    reader->chunk_dst_buf_len = max_len;
 
     *out_len = 0;
     next = *it;
@@ -153,11 +152,18 @@ cborattr_read_string(CborValue *it, void *dst, size_t max_len, size_t *out_len)
         if (err != 0) {
             return err;
         }
-        *out_len += len;
 
         if (tmp == NULL) {
             return 0;
         }
+
+        tmp = read_bytes(it, dst, 0, len);
+        if (tmp == NULL) {
+            return -1; // XXX
+        }
+        *out_len += len;
+
+        advance_bytes(&next, len);
     }
 }
 
@@ -217,17 +223,18 @@ cbor_internal_read_object(CborValue *root_value,
     while (cbor_value_is_valid(&cur_value) && !err) {
         /* get the attribute */
         if (cbor_value_is_text_string(&cur_value)) {
-            if (cbor_value_calculate_string_length(&cur_value, &len) == 0) {
-                if (len > CBORATTR_MAX_SIZE) {
-                    err |= CborErrorDataTooLarge;
-                    break;
-                }
+            //if (cbor_value_calculate_string_length(&cur_value, &len) == 0) {
+                //if (len > CBORATTR_MAX_SIZE) {
+                    //err |= CborErrorDataTooLarge;
+                    //break;
+                //}
                 err |= cborattr_read_string(&cur_value, attrbuf, len, &len);
-            }
+            //}
 
             /* at least get the type of the next value so we can match the
              * attribute name and type for a perfect match */
-            err |= cbor_value_advance(&cur_value);
+            //err |= cbor_value_advance(&cur_value);
+
             if (cbor_value_is_valid(&cur_value)) {
                 type = cbor_value_get_type(&cur_value);
             } else {
@@ -301,7 +308,9 @@ cbor_internal_read_object(CborValue *root_value,
                 err |= CborErrorIllegalType;
             }
         }
-        cbor_value_advance(&cur_value);
+        if (cursor->type != CborAttrByteStringType && cursor->type != CborAttrTextStringType) {
+            cbor_value_advance(&cur_value);
+        }
     }
     if (!err) {
         /* that should be it for this container */

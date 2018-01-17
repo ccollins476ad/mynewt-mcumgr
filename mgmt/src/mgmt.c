@@ -40,7 +40,7 @@ mgmt_cbor_read_bytes(void *token, void *dst, size_t offset, size_t len)
     struct mgmt_reader *reader;
 
     reader = token;
-    reader->read_cb(reader, dst, offset, len);
+    reader->read_cb(reader, dst, reader->offset + offset, len);
     return dst;
 }
 
@@ -57,17 +57,7 @@ static CborError
 mgmt_cbor_transfer_string(void *token, const void **userptr, size_t offset,
                           size_t len)
 {
-    struct mgmt_reader *reader;
-
-    reader = token;
-    if (reader->chunk_dst_buf_len < len) {
-        return CborErrorOutOfMemory;
-    }
-
-    mgmt_cbor_read_bytes(reader, reader->chunk_dst_buf, offset, len);
-    reader->chunk_dst_buf += len;
-    reader->chunk_dst_buf_len -= len;
-
+    mgmt_cbor_advance_bytes(token, offset); 
     return 0;
 }
 
@@ -123,12 +113,15 @@ mgmt_streamer_write_at(struct mgmt_streamer *streamer, size_t offset,
 int
 mgmt_streamer_init_reader(struct mgmt_streamer *streamer, void *buf)
 {
+    streamer->reader->offset = 0;
+    streamer->reader->message_size = 0;
     return streamer->cfg->init_reader(streamer->reader, buf, streamer->cb_arg);
 }
 
 int
 mgmt_streamer_init_writer(struct mgmt_streamer *streamer, void *buf)
 {
+    streamer->writer->bytes_written = 0;
     return streamer->cfg->init_writer(streamer->writer, buf, streamer->cb_arg);
 }
 
