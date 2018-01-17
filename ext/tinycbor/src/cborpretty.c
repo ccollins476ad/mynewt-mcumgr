@@ -29,8 +29,8 @@
 #endif
 
 #include "cbor.h"
-#include "compilersupport_p.h"
 #include "cborinternal_p.h"
+#include "compilersupport_p.h"
 #include "utf8_p.h"
 
 #include <float.h>
@@ -236,15 +236,11 @@ static const char *resolve_indicator(const CborValue *it, int flags)
     uint8_t expected_information;
     uint64_t value;
     CborError err;
-    int offset;
-    uint8_t val;
 
-    if (it->offset == it->parser->end)
+    if (!read_bytes(it, &additional_information, 0, 1))
         return NULL;    /* CborErrorUnexpectedEOF */
 
-    val = it->parser->d->get8(it->parser->d, it->offset);
-
-    additional_information = (val & SmallValueMask);
+    additional_information &= SmallValueMask;
     if (additional_information < Value8Bit)
         return no_indicator;
 
@@ -255,9 +251,7 @@ static const char *resolve_indicator(const CborValue *it, int flags)
     if ((flags & CborPrettyIndicateOverlongNumbers) == 0)
         return no_indicator;
 
-    offset = it->offset;
-
-    err = _cbor_value_extract_number(it->parser, &offset, &value);
+    err = extract_number_checked(it, &value, NULL);
     if (err)
         return NULL;    /* CborErrorUnexpectedEOF */
 
@@ -328,12 +322,12 @@ static CborError value_to_pretty(CborStreamFunction stream, void *out, CborValue
 
         err = cbor_value_enter_container(it, &recursed);
         if (err) {
-            it->offset = recursed.offset;
+            copy_current_position(it, &recursed);
             return err;       /* parse error */
         }
         err = container_to_pretty(stream, out, &recursed, type, flags, recursionsLeft - 1);
         if (err) {
-            it->offset = recursed.offset;
+            copy_current_position(it, &recursed);
             return err;       /* parse error */
         }
         err = cbor_value_leave_container(it, &recursed);
@@ -457,7 +451,7 @@ static CborError value_to_pretty(CborStreamFunction stream, void *out, CborValue
         err = stream(out, val ? "true" : "false");
         break;
     }
-#ifndef NO_FLOAT_SUPPORT
+
     case CborDoubleType: {
         const char *suffix;
         double val;
@@ -496,11 +490,12 @@ static CborError value_to_pretty(CborStreamFunction stream, void *out, CborValue
         }
         break;
     }
-#endif
+
     case CborInvalidType:
         err = stream(out, "invalid");
         if (err)
             return err;
+        return CborErrorUnknownType;
     }
 
     if (!err)

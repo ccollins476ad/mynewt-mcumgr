@@ -355,7 +355,7 @@ encode_double:
             if (err)
                 return err;
         }
-        return cbor_encoder_close_container(encoder, &container);
+        return cbor_encoder_close_container_checked(encoder, &container);
 
     case cJSON_Object:
         err = cbor_encoder_create_map(encoder, &container,
@@ -389,7 +389,7 @@ encode_double:
                 return err;
         }
 
-        return cbor_encoder_close_container(encoder, &container);
+        return cbor_encoder_close_container_checked(encoder, &container);
     }
 }
 
@@ -473,9 +473,7 @@ int main(int argc, char **argv)
     /* 3. encode as CBOR */
     // We're going to reuse the buffer, as CBOR is usually shorter than the equivalent JSON
     CborEncoder encoder;
-
     cbor_encoder_init(&encoder, buffer, buffersize, 0);
-
     CborError err = decode_json(doc, &encoder);
 
     cJSON_Delete(doc);
@@ -486,7 +484,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    fwrite(buffer, 1, cb.ptr - buffer, stdout);
+    fwrite(buffer, 1, encoder.data.ptr - buffer, stdout);
     free(buffer);
     return EXIT_SUCCESS;
 }

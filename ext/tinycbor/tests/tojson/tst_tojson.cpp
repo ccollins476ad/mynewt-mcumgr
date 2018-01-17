@@ -215,7 +215,6 @@ void compareOne_real(const QByteArray &data, const QString &expected, int flags,
     compareFailed = true;
     CborParser parser;
     CborValue first;
-
     CborError err = cbor_parser_init(reinterpret_cast<const quint8 *>(data.constData()), data.length(), 0, &parser, &first);
     QVERIFY2(!err, QByteArray::number(line) + ": Got error \"" + cbor_error_string(err) + "\"");
 
@@ -226,7 +225,7 @@ void compareOne_real(const QByteArray &data, const QString &expected, int flags,
     QCOMPARE(decoded, expected);
 
     // check that we consumed everything
-    QCOMPARE(cbor_value_at_end(&first), true);
+    QCOMPARE((void*)cbor_value_get_next_byte(&first), (void*)data.constEnd());
 
     compareFailed = false;
 }
@@ -422,7 +421,6 @@ void tst_ToJson::nonStringKeyMaps()
     CborParser parser;
     CborValue first;
     QString decoded;
-
     cbor_parser_init(reinterpret_cast<const quint8 *>(data.constData()), data.length(), 0, &parser, &first);
     CborError err = parseOne(&first, &decoded, CborConvertRequireMapStringKeys);
     QCOMPARE(err, CborErrorJsonObjectKeyNotString);
@@ -659,7 +657,6 @@ void compareMetaData(QByteArray data, const QString &expected, int otherFlags = 
     {
         CborParser parser;
         CborValue first;
-
         CborError err = cbor_parser_init(reinterpret_cast<const quint8 *>(data.constData()), data.length(), 0, &parser, &first);
         QVERIFY2(!err, QByteArrayLiteral(": Got error \"") + cbor_error_string(err) + "\"");
 
@@ -668,7 +665,7 @@ void compareMetaData(QByteArray data, const QString &expected, int otherFlags = 
                  "\"; decoded stream:\n" + decoded.toLatin1());
 
         // check that we consumed everything
-        QCOMPARE(cbor_value_at_end(&first), true);
+        QCOMPARE((void*)cbor_value_get_next_byte(&first), (void*)data.constEnd());
     }
 
     QVERIFY(decoded.startsWith("{\"v\":"));

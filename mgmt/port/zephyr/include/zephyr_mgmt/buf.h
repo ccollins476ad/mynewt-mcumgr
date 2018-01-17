@@ -21,17 +21,19 @@
 #define H_MGMT_BUF
 
 #include <inttypes.h>
-#include "cbor_encoder_writer.h"
-#include "cbor_decoder_reader.h"
+#include "mgmt/mgmt.h"
+
+//#include "cbor_encoder_writer.h"
+//#include "cbor_decoder_reader.h"
 struct net_buf;
 
 struct cbor_nb_reader {
-    struct cbor_decoder_reader r;
+    struct mgmt_reader r;
     struct net_buf *nb;
 };
 
 struct cbor_nb_writer {
-    struct cbor_encoder_writer enc;
+    struct mgmt_writer w;
     struct net_buf *nb;
 };
 

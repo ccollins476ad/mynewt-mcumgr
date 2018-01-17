@@ -3,7 +3,7 @@ prefix = /usr/local
 exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
 libdir = $(exec_prefix)/lib
-includedir = $(prefix)/src
+includedir = $(prefix)/include
 pkgconfigdir = $(libdir)/pkgconfig
 
 CFLAGS = -Wall -Wextra
@@ -20,23 +20,20 @@ RMDIR = rmdir
 SED = sed
 
 # Our sources
-TINYCBOR_HEADERS = \
-	src/cbor.h \
- 	src/cborjson.h \
-	src/cbor_enocoder_writer.h \
-	src/cbor_decoder_reader.h \
-	src/cbor_defs.h
-TINYCBOR_SOURCES = \
+TINYCBOR_HEADERS = src/cbor.h src/cborjson.h
+TINYCBOR_FREESTANDING_SOURCES = \
 	src/cborerrorstrings.c \
 	src/cborencoder.c \
+	src/cborencoder_close_container_checked.c \
 	src/cborparser.c \
-	src/cborparser_dup_string.c \
 	src/cborpretty.c \
+#
+TINYCBOR_SOURCES = \
+	$(TINYCBOR_FREESTANDING_SOURCES) \
+	src/cborparser_dup_string.c \
 	src/cborpretty_stdio.c \
 	src/cbortojson.c \
 	src/cborvalidation.c \
-	src/cbor_buf_reader.c \
-	src/cbor_buf_writer.c
 #
 CBORDUMP_SOURCES = tools/cbordump/cbordump.c
 
@@ -61,7 +58,7 @@ BINLIBRARY=lib/libtinycbor.a
 INSTALL_TARGETS += $(libdir)/libtinycbor.a
 endif
 INSTALL_TARGETS += $(pkgconfigdir)/tinycbor.pc
-INSTALL_TARGETS += $(TINYCBOR_HEADERS:./%=$(includedir)/%)
+INSTALL_TARGETS += $(TINYCBOR_HEADERS:src/%=$(includedir)/tinycbor/%)
 
 # setup VPATH
 MAKEFILE := $(lastword $(MAKEFILE_LIST))
@@ -134,6 +131,10 @@ configure: .config
 .config: Makefile.configure
 	$(MAKE) -f $(SRCDIR)Makefile.configure OUT='>&9' configure 9> $@
 
+lib/libtinycbor-freestanding.a: $(TINYCBOR_FREESTANDING_SOURCES:.c=.o)
+	@$(MKDIR) -p lib
+	$(AR) cqs $@ $^
+
 lib/libtinycbor.a: $(TINYCBOR_SOURCES:.c=.o)
 	@$(MKDIR) -p lib
 	$(AR) cqs $@ $^
@@ -176,7 +177,7 @@ $(DESTDIR)$(bindir)/%: bin/%
 $(DESTDIR)$(pkgconfigdir)/%: %
 	$(INSTALL) -d $(@D)
 	$(INSTALL_DATA) $< $@
-$(DESTDIR)$(includedir)/%: src/%
+$(DESTDIR)$(includedir)/tinycbor/%: src/%
 	$(INSTALL) -d $(@D)
 	$(INSTALL_DATA) $< $@
 
@@ -196,6 +197,7 @@ clean: mostlyclean
 	$(RM) bin/cbordump
 	$(RM) bin/json2cbor
 	$(RM) lib/libtinycbor.a
+	$(RM) lib/libtinycbor-freestanding.a
 	$(RM) tinycbor.pc
 	$(RM) lib/libtinycbor.so*
 	test -e tests/Makefile && $(MAKE) -C tests clean || :
@@ -221,7 +223,7 @@ tag: distcheck
 .PHONY: docs dist distcheck release
 .SECONDARY:
 
-cflags := $(CPPFLAGS) -I$(SRCDIR)/src
+cflags := $(CPPFLAGS) -I$(SRCDIR)src
 cflags += -DTINYCBOR_VERSION_SUFFIX=\"$(DIRTYSRC)\"
 cflags += -std=c99 $(CFLAGS)
 %.o: %.c

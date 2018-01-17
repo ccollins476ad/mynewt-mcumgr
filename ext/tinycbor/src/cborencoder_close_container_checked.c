@@ -22,24 +22,36 @@
 **
 ****************************************************************************/
 
-#ifndef CBOR_ENCODER_H
-#define CBOR_ENCODER_H
-
-#ifdef __cplusplus
-extern "C" {
+#define _BSD_SOURCE 1
+#define _DEFAULT_SOURCE 1
+#ifndef __STDC_LIMIT_MACROS
+#  define __STDC_LIMIT_MACROS 1
 #endif
 
-struct cbor_encoder_writer;
+#include "cbor.h"
 
-typedef int (cbor_encoder_write)(struct cbor_encoder_writer *, const char *data, int len);
+/**
+ * \addtogroup CborEncoding
+ * @{
+ */
 
-typedef struct cbor_encoder_writer {
-    cbor_encoder_write *write;
-    int                 bytes_written;
-} cbor_encoder_writer;
-
-#ifdef __cplusplus
+/**
+ * @deprecated
+ *
+ * Closes the CBOR container (array or map) provided by \a containerEncoder and
+ * updates the CBOR stream provided by \a encoder. Both parameters must be the
+ * same as were passed to cbor_encoder_create_array() or
+ * cbor_encoder_create_map().
+ *
+ * Prior to version 0.5, cbor_encoder_close_container() did not check the
+ * number of items added. Since that version, it does and now
+ * cbor_encoder_close_container_checked() is no longer needed.
+ *
+ * \sa cbor_encoder_create_array(), cbor_encoder_create_map()
+ */
+CborError cbor_encoder_close_container_checked(CborEncoder *encoder, const CborEncoder *containerEncoder)
+{
+    return cbor_encoder_close_container(encoder, containerEncoder);
 }
-#endif
 
-#endif /* CBOR_ENCODER_WRITER_H */
+/** @} */

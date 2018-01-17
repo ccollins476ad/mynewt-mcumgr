@@ -22,7 +22,6 @@
 **
 ****************************************************************************/
 
-#include "cbor_defs.h"
 #include "cbor.h"
 
 #ifndef _
@@ -169,6 +168,9 @@ const char *cbor_error_string(CborError error)
 
     case CborErrorUnsupportedType:
         return _("unsupported type");
+
+    case CborErrorUnimplementedValidation:
+        return _("validation not implemented for the current parser state");
 
     case CborErrorJsonObjectKeyIsAggregate:
         return _("conversion to JSON failed: key in object is an array or map");

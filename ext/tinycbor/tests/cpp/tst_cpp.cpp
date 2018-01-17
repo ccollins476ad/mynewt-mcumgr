@@ -22,8 +22,6 @@
 **
 ****************************************************************************/
 
-#include "../../src/cbor_buf_writer.c"
-#include "../../src/cbor_buf_reader.c"
 #include "../../src/cborencoder.c"
 #include "../../src/cborerrorstrings.c"
 #include "../../src/cborparser.c"

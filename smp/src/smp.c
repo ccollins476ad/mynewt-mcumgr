@@ -69,15 +69,16 @@ smp_init_rsp_hdr(const struct mgmt_hdr *req_hdr, struct mgmt_hdr *rsp_hdr)
 static int
 smp_read_hdr(struct smp_streamer *streamer, struct mgmt_hdr *dst_hdr)
 {
-    struct cbor_decoder_reader *reader;
+    struct mgmt_reader *reader;
+    int rc;
 
     reader = streamer->mgmt_stmr.reader;
 
-    if (reader->message_size < sizeof *dst_hdr) {
+    rc = reader->read_cb(reader, dst_hdr, 0, sizeof *dst_hdr);
+    if (rc != 0) {
         return MGMT_ERR_EINVAL;
     }
 
-    reader->cpy(reader, (char *)dst_hdr, 0, sizeof *dst_hdr);
     return 0;
 }
 
@@ -127,7 +128,8 @@ smp_build_err_rsp(struct smp_streamer *streamer,
         return rc;
     }
 
-    rsp_hdr.nh_len = cbor_encode_bytes_written(&cbuf.encoder) - MGMT_HDR_SIZE;
+    rsp_hdr.nh_len = streamer->mgmt_stmr.writer->bytes_written -
+                     MGMT_HDR_SIZE;
     mgmt_hton_hdr(&rsp_hdr);
     rc = smp_write_hdr(streamer, &rsp_hdr);
     if (rc != 0) {
@@ -246,7 +248,8 @@ smp_handle_single_req(struct smp_streamer *streamer,
     }
 
     /* Fix up the response header with the correct length. */
-    rsp_hdr.nh_len = cbor_encode_bytes_written(&cbuf.encoder) - MGMT_HDR_SIZE;
+    rsp_hdr.nh_len = streamer->mgmt_stmr.writer->bytes_written -
+                     MGMT_HDR_SIZE;
     mgmt_hton_hdr(&rsp_hdr);
     rc = smp_write_hdr(streamer, &rsp_hdr);
     if (rc != 0) {

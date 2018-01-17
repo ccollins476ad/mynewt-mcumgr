@@ -17,10 +17,9 @@
  * under the License.
  */
 
-//#include <syscfg/syscfg.h>
+#include "mgmt/mgmt.h"
 #include "cborattr/cborattr.h"
 #include "cbor.h"
-#include "cbor_buf_reader.h"
 
 #define CBORATTR_MAX_SIZE 512
 
@@ -134,6 +133,34 @@ cbor_target_address(const struct cbor_attr_t *cursor,
     return targetaddr;
 }
 
+static CborError
+cborattr_read_string(CborValue *it, void *dst, size_t max_len, size_t *out_len)
+{
+    struct mgmt_reader *reader;
+    const void *tmp;
+    CborValue next;
+    CborError err;
+    size_t len;
+
+    reader = it->source.token;
+    reader->chunk_dst_buf = dst;
+    reader->chunk_dst_buf_len = max_len;
+
+    *out_len = 0;
+    next = *it;
+    while (1) {
+        err = _cbor_value_get_string_chunk(&next, &tmp, &len, &next);
+        if (err != 0) {
+            return err;
+        }
+        *out_len += len;
+
+        if (tmp == NULL) {
+            return 0;
+        }
+    }
+}
+
 static int
 cbor_internal_read_object(CborValue *root_value,
                           const struct cbor_attr_t *attrs,
@@ -195,8 +222,7 @@ cbor_internal_read_object(CborValue *root_value,
                     err |= CborErrorDataTooLarge;
                     break;
                 }
-                err |= cbor_value_copy_text_string(&cur_value, attrbuf, &len,
-                                                     NULL);
+                err |= cborattr_read_string(&cur_value, attrbuf, len, &len);
             }
 
             /* at least get the type of the next value so we can match the
@@ -255,15 +281,13 @@ cbor_internal_read_object(CborValue *root_value,
 #endif
             case CborAttrByteStringType: {
                 size_t len = cursor->len;
-                err |= cbor_value_copy_byte_string(&cur_value, lptr,
-                                                   &len, NULL);
+                err |= cborattr_read_string(&cur_value, lptr, len, &len);
                 *cursor->addr.bytestring.len = len;
                 break;
             }
             case CborAttrTextStringType: {
                 size_t len = cursor->len;
-                err |= cbor_value_copy_text_string(&cur_value, lptr,
-                                                   &len, NULL);
+                err |= cborattr_read_string(&cur_value, lptr, len, &len);
                 break;
             }
             case CborAttrArrayType:
@@ -325,7 +349,7 @@ cbor_read_array(struct CborValue *value, const struct cbor_array_t *arr)
 #endif
         case CborAttrTextStringType:
             len = arr->arr.strings.storelen - (tp - arr->arr.strings.store);
-            err |= cbor_value_copy_text_string(&elem, tp, &len, NULL);
+            err |= cborattr_read_string(&elem, tp, len, &len);
             arr->arr.strings.ptrs[off] = tp;
             tp += len + 1;
             break;
@@ -365,6 +389,7 @@ cbor_read_object(struct CborValue *value, const struct cbor_attr_t *attrs)
     return st;
 }
 
+#if 0
 /*
  * Read in cbor key/values from flat buffer pointed by data, and fill them
  * into attrs.
@@ -386,35 +411,6 @@ cbor_read_flat_attrs(const uint8_t *data, int len,
 
     cbor_buf_reader_init(&reader, data, len);
     err = cbor_parser_cust_reader_init(&reader.r, 0, &parser, &value);
-    if (err != CborNoError) {
-        return -1;
-    }
-    return cbor_read_object(&value, attrs);
-}
-
-#if 0
-/*
- * Read in cbor key/values from os_mbuf pointed by m, and fill them
- * into attrs.
- *
- * @param m		Pointer to os_mbuf containing cbor encoded data
- * @param off		Offset into mbuf where cbor data begins
- * @param len		Number of bytes to decode
- * @param attrs		Array of cbor objects to look for.
- *
- * @return		0 on success; non-zero on failure.
- */
-int
-cbor_read_mbuf_attrs(struct os_mbuf *m, uint16_t off, uint16_t len,
-                     const struct cbor_attr_t *attrs)
-{
-    struct cbor_mbuf_reader cmr;
-    struct CborParser parser;
-    struct CborValue value;
-    CborError err;
-
-    cbor_mbuf_reader_init(&cmr, m, off);
-    err = cbor_parser_init(&cmr.r, 0, &parser, &value);
     if (err != CborNoError) {
         return -1;
     }

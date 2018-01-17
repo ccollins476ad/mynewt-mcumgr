@@ -25,7 +25,6 @@
 #define _POSIX_C_SOURCE 200809L
 #include "cbor.h"
 #include "cborjson.h"
-#include "cbor_buf_reader.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,10 +50,10 @@ void printerror(CborError err, const char *fname)
 void dumpFile(FILE *in, const char *fname, bool printJosn, int flags)
 {
     static const size_t chunklen = 16 * 1024;
-    static int bufsize = 0;
+    static size_t bufsize = 0;
     static uint8_t *buffer = NULL;
 
-    int buflen = 0;
+    size_t buflen = 0;
     do {
         if (bufsize == buflen)
             buffer = xrealloc(buffer, bufsize += chunklen, fname);
@@ -71,9 +70,7 @@ void dumpFile(FILE *in, const char *fname, bool printJosn, int flags)
 
     CborParser parser;
     CborValue value;
-    CborError err = CborNoError;
-
-    err |= cbor_parser_init(buffer, buflen, 0, &parser, &value);
+    CborError err = cbor_parser_init(buffer, buflen, 0, &parser, &value);
     if (!err) {
         if (printJosn)
             err = cbor_value_to_json_advance(stdout, &value, flags);
@@ -82,7 +79,7 @@ void dumpFile(FILE *in, const char *fname, bool printJosn, int flags)
         if (!err)
             puts("");
     }
-    if (!err && value.offset != buflen)
+    if (!err && cbor_value_get_next_byte(&value) != buffer + buflen)
         err = CborErrorGarbageAtEnd;
     if (err)
         printerror(err, fname);

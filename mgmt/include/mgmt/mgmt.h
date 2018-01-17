@@ -80,6 +80,29 @@ struct mgmt_hdr {
     uint8_t  nh_id;             /* Message ID within group */
 };
 
+struct mgmt_writer;
+typedef int mgmt_write_fn(struct mgmt_writer *writer,
+                          const void *data,
+                          size_t len);
+
+struct mgmt_writer {
+    mgmt_write_fn *write_cb;
+    size_t bytes_written;
+};
+
+struct mgmt_reader;
+typedef int mgmt_read_fn(struct mgmt_reader *reader, void *dst,
+                         size_t offset, size_t len);
+
+struct mgmt_reader {
+    mgmt_read_fn *read_cb;
+    size_t offset;
+    size_t message_size;
+
+    uint8_t *chunk_dst_buf;
+    size_t chunk_dst_buf_len;
+};
+
 /** @typedef mgmt_alloc_rsp_fn
  * @brief Allocates a buffer suitable for holding a response.
  *
@@ -130,7 +153,7 @@ typedef void mgmt_reset_buf_fn(void *buf, void *arg);
  *
  * @return                      0 on success, MGMT_ERR_[...] code on failure.
  */
-typedef int mgmt_write_at_fn(struct cbor_encoder_writer *writer, size_t offset,
+typedef int mgmt_write_at_fn(struct mgmt_writer *writer, size_t offset,
                              const void *data, size_t len, void *arg);
 
 /** @typedef mgmt_init_reader_fn
@@ -142,7 +165,7 @@ typedef int mgmt_write_at_fn(struct cbor_encoder_writer *writer, size_t offset,
  *
  * @return                      0 on success, MGMT_ERR_[...] code on failure.
  */
-typedef int mgmt_init_reader_fn(struct cbor_decoder_reader *reader, void *buf,
+typedef int mgmt_init_reader_fn(struct mgmt_reader *reader, void *buf,
                                 void *arg);
 
 /** @typedef mgmt_init_writer_fn
@@ -154,7 +177,7 @@ typedef int mgmt_init_reader_fn(struct cbor_decoder_reader *reader, void *buf,
  *
  * @return                      0 on success, MGMT_ERR_[...] code on failure.
  */
-typedef int mgmt_init_writer_fn(struct cbor_encoder_writer *writer, void *buf,
+typedef int mgmt_init_writer_fn(struct mgmt_writer *writer, void *buf,
                                 void *arg);
 
 /** @typedef mgmt_init_writer_fn
@@ -169,6 +192,7 @@ typedef void mgmt_free_buf_fn(void *buf, void *arg);
  * @brief Configuration for constructing a mgmt_streamer object.
  */
 struct mgmt_streamer_cfg {
+    mgmt_read_fn *read;
     mgmt_alloc_rsp_fn *alloc_rsp;
     mgmt_trim_front_fn *trim_front;
     mgmt_reset_buf_fn *reset_buf;
@@ -184,8 +208,8 @@ struct mgmt_streamer_cfg {
 struct mgmt_streamer {
     const struct mgmt_streamer_cfg *cfg;
     void *cb_arg;
-    struct cbor_decoder_reader *reader;
-    struct cbor_encoder_writer *writer;
+    struct mgmt_reader *reader;
+    struct mgmt_writer *writer;
 };
 
 /**

@@ -25,6 +25,75 @@
 static struct mgmt_group *mgmt_group_list;
 static struct mgmt_group *mgmt_group_list_end;
 
+static bool 
+mgmt_cbor_can_read_bytes(void *token, size_t len)
+{
+    struct mgmt_reader *reader;
+
+    reader = token;
+    return reader->offset + len <= reader->message_size;
+}
+
+static void *
+mgmt_cbor_read_bytes(void *token, void *dst, size_t offset, size_t len)
+{
+    struct mgmt_reader *reader;
+
+    reader = token;
+    reader->read_cb(reader, dst, offset, len);
+    return dst;
+}
+
+static void 
+mgmt_cbor_advance_bytes(void *token, size_t len)
+{
+    struct mgmt_reader *reader;
+
+    reader = token;
+    reader->offset += len;
+}
+
+static CborError 
+mgmt_cbor_transfer_string(void *token, const void **userptr, size_t offset,
+                          size_t len)
+{
+    struct mgmt_reader *reader;
+
+    reader = token;
+    if (reader->chunk_dst_buf_len < len) {
+        return CborErrorOutOfMemory;
+    }
+
+    mgmt_cbor_read_bytes(reader, reader->chunk_dst_buf, offset, len);
+    reader->chunk_dst_buf += len;
+    reader->chunk_dst_buf_len -= len;
+
+    return 0;
+}
+
+static const struct CborParserOperations mgmt_cbor_ops = {
+    .can_read_bytes = mgmt_cbor_can_read_bytes,
+    .read_bytes = mgmt_cbor_read_bytes,
+    .advance_bytes = mgmt_cbor_advance_bytes,
+    .transfer_string = mgmt_cbor_transfer_string,
+};
+
+static CborError 
+mgmt_cbor_write(void *token, const void *src, size_t len)
+{
+    struct mgmt_writer *writer;
+    int rc;
+
+    writer = token;
+    rc = writer->write_cb(writer, src, len);
+    if (rc != 0) {
+        return rc;
+    }
+
+    writer->bytes_written += len;
+    return 0;
+}
+
 void *
 mgmt_streamer_alloc_rsp(struct mgmt_streamer *streamer, const void *req)
 {
@@ -144,13 +213,14 @@ mgmt_ctxt_init(struct mgmt_ctxt *cbuf, struct mgmt_streamer *streamer)
 {
     int rc;
 
-    rc = cbor_parser_cust_reader_init(streamer->reader, 0, &cbuf->parser,
-                                      &cbuf->it);
+    rc = cbor_parser_init_reader(&mgmt_cbor_ops, &cbuf->parser, &cbuf->it,
+                                 streamer->reader);
     if (rc != CborNoError) {
         return mgmt_err_from_cbor(rc);
     }
 
-    cbor_encoder_cust_writer_init(&cbuf->encoder, streamer->writer, 0);
+    cbor_encoder_init_writer(&cbuf->encoder, mgmt_cbor_write,
+                             streamer->writer);
 
     return 0;
 }
