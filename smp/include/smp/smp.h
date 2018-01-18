@@ -28,7 +28,7 @@
  *     [Offset 8]: CBOR map of command-specific key-value pairs.
  *
  * SMP request packets may contain multiple concatenated requests.  Each
- * request must start at an offset that is a multiple of 4, so padding shuold
+ * request must start at an offset that is a multiple of 4, so padding should
  * be inserted between requests as necessary.  Requests are processed
  * sequentially from the start of the packet to the end.  Each response is sent
  * individually in its own packet.  If a request elicits an error response,
