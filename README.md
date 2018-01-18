@@ -7,11 +7,25 @@ define a common management infrastructure with pluggable transport and encoding
 components.  In addition, mcumgr provides definitions and handlers for some
 core commands: image management, file system management, and OS managment.
 
-mcumgr is operating system and hardware independent, and relies on
-hardware porting layers from the operating system it works with.  Currently
-mcuboot works with both the Apache Mynewt, and Zephyr operating systems.
+mcumgr is operating system and hardware independent.  It relies on hardware
+porting layers from the operating system it runs on.  Currently, mcumgr runs on
+both the Apache Mynewt and Zephyr operating systems.
+
+## Command line tool
+
+The `mcumgr` command line tool is available at:
+https://github.com/apache/mynewt-mcumgr-cli.  The tool is written in Go, and it
+is installed with the `go get` command:
+
+```
+$ go get github.com/apache/mynewt-mcumgr-cli/mcumgr
+```
+
+The `mcumgr` tool allows you to manage devices running an mcumgr server.
 
 ## Architecture
+
+The mcumgr stack has the following layout:
 
 ```
 +---------------------+---------------------+
@@ -66,13 +80,30 @@ An mcumgr request or response consists of the following two components:
 How these two components are encoded and parsed depends on the transfer
 encoding used.
 
-The mcumgr header structure is defined in `mgmt/include/mgmt/mgmt.h` as `struct mgmt_hdr`.
+The mcumgr header structure is defined in `mgmt/include/mgmt/mgmt.h` as
+`struct mgmt_hdr`.
 
 The contents of the CBOR key-value map are specified per command type.
 
+## Supported transfer encodings
+
+Mcumgr comes with one built-in transfer encoding: Simple Management Protocol (SMP).  SMP requests and responses have a very basic structure.  For details, see the comments at the top of `smp/include/smp/smp.h`.
+
+## Supported transports
+
+The mcumgr project defines two transports:
+    * SMP/Console
+    * SMP/Bluetooth
+
+Particulars of these transports are specified in the following documents:
+    * SMP/Console: `transports/smp-console.md`
+    * SMP/Bluetooth: `transports/smp-bluetooth.md`
+
+Implementations, being hardware- and OS-specified, are not included.
+
 ## Browsing
 
-Information and documentation on the bootloader is stored within the source.
+Information and documentation for mcumgr is stored within the source.
 
 For more information in the source, here are some pointers:
 
@@ -87,5 +118,4 @@ For more information in the source, here are some pointers:
 
 Developers welcome!
 
-* Our Slack channel: https://mcuboot.slack.com/ <br />
-  Get your invite [here!](https://join.slack.com/t/mcuboot/shared_invite/MjE2NDcwMTQ2MTYyLTE1MDA4MTIzNTAtYzgyZTU0NjFkMg)
+* Our Slack channel: https://mynewt.slack.com/messages/C7Y3K0C2J
