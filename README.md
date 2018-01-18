@@ -114,6 +114,10 @@ For more information in the source, here are some pointers:
 - [samples](https://github.com/apache/mcumgr/tree/master/samples): Sample applications utilizing mcumgr.
 - [smp](https://github.com/apache/mcumgr/tree/master/smp): The built-in transfer encoding: Simple management protocol.
 
+## Known issues
+
+- (Zephyr) If the Bluetooth stack runs out of ACL transmit buffers while a large mcumgr response is being sent, the buffers never get freed.  This appears to trigger a net_buf leak in the stack.
+
 ## Joining
 
 Developers welcome!
